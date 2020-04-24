@@ -11,3 +11,6 @@ KP SS2020
 - The submodule 'estimator' takes the encoded vectors and uses them on a neural network
 
 - The submodule 'postrgres-evaluator' takes the sql-queries and executes them on the postgres-database to get the true cardinality
+
+
+![Module overview](module_overview.png)
