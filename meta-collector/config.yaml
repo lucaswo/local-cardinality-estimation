@@ -1,6 +1,5 @@
 # Postgres
 db_name: "imdb"
-database:
 user: "postgres"
 password: "postgres"
 host: "localhost"
