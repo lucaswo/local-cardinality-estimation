@@ -40,11 +40,18 @@ class MetaCollector:
             with open("config.yaml") as file:
                 config = yaml.safe_load(file)
 
-        self.db_name = config["db_name"] if config["db_name"] is not None else None
-        self.db_user = config["user"] if config["user"] is not None else None
-        self.db_password = config["password"] if config["password"] is not None else None
-        self.db_host = config["host"] if config["host"] is not None else None
-        self.db_port = config["port"] if config["port"] is not None else None
+        if config["db_name"] is None or config["db_name"] == "":
+            raise ValueError("Value for db_name is needed! You can provide it with the config dict or in config.yaml!")
+        if config["user"] is None or config["user"] == "":
+            raise ValueError("Value for user is needed! You can provide it with the config dict or in config.yaml!")
+        if config["password"] is None or config["password"] == "":
+            raise ValueError("Value for password is needed! You can provide it with the config dict or in config.yaml!")
+
+        self.db_name = config["db_name"]
+        self.db_user = config["user"]
+        self.db_password = config["password"]
+        self.db_host = config["host"] if (config["host"] is not None and config["host"] != "") else None
+        self.db_port = config["port"] if (config["port"] is not None and config["port"] != "") else None
 
         self.debug = debug
 
@@ -72,9 +79,13 @@ class MetaCollector:
         :return: void
         """
 
-        if self.debug:
-            print("Closing connection to postgres")
-        self.conn.close()
+        if not self.conn:
+            print("There is no database-connection to close. Make sure to establish a connection to the database before"
+                  " trying to close it.")
+        else:
+            if self.debug:
+                print("Closing connection to postgres")
+            self.conn.close()
 
     def setup_view(self, table_names: List[str], columns: List[str], join_atts: List[Tuple[str, str]] = None,
                    cube: bool = False) -> (List[Tuple[str, str]], int):
@@ -90,6 +101,10 @@ class MetaCollector:
         :return: first: a list of tuples containing the name and the datatype for the columns, each as string
             second: the maximal cardinality as integer
         """
+
+        if not self.cur:
+            raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
+                                  "'open_database_connection' befrore this method.")
 
         # drops maybe already existing tables with metadata
         sql = """DROP TABLE IF EXISTS tmpview; DROP TABLE IF EXISTS tmpview_cube;"""
@@ -162,6 +177,10 @@ class MetaCollector:
             second: a dictionary of the not integer encoders with key attribute-name and value the encoder
         """
 
+        if not self.cur:
+            raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
+                                  "'open_database_connection' befrore this method.")
+
         min_max = {}
         encoders = {}
 
@@ -227,10 +246,7 @@ class MetaCollector:
             self.save_meta(result_dict)
 
         return result_dict
-
-
-# TODO documentation
-
+    
 
 mc = MetaCollector()
 # example which should work -> takes quite a while to be processed
