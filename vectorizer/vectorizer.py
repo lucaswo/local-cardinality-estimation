@@ -1,6 +1,10 @@
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
+# TODO: Documentation
+# TODO: Type Hinting: : e.g. List[Tuple[str, str]]
+# Proposal: Do not call the vectorizer for each single query string, but collect them and then execute them parallelized
+
 def vectorize_query_original(query_str, min_max, encoders):
     query_str = query_str.replace("NULL", "-1").replace("IS NOT", "!=").replace(";", "")
     total_columns = len(min_max)
