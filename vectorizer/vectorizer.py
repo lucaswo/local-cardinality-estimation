@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from typing import List, Tuple, Dict
+import time
+import os.path
 
 # Proposal: Do not call the vectorizer for each single query string, but collect them and then execute them parallelized
 
@@ -25,6 +27,7 @@ class Vectorizer:
     def setQuery(self, query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]):
         """Reads a new query for another vectorisation task. Avoids Vectorizer object switch."""
 
+        self.query = query
         self.expressions = query.split("WHERE", maxsplit=1)[1].split("AND")
         assert self.n_max_expressions > len(self.expressions), f"Too many expressions concatinated by 'AND' in query!"
 
@@ -63,6 +66,15 @@ class Vectorizer:
             self.vector[idx*self.n_max_expressions:end_idx] = self.operators[operator]
             self.vector[end_idx] = normalized_value
         return self.vector
+
+    def save(self, path: str):
+        """Stores the SQL query and corresponding vector at given path"""
+
+        timestr = time.strftime("%Y%m%d_%H%M%S")
+        np.save( os.path.join(path, f"{timestr}_vector.npy"), self.vector )
+        np.savetxt( os.path.join(path, f"{timestr}_vector.txt"), self.vector )
+        with open( os.path.join(path, f"{timestr}_query.sql"), "a" ) as f:
+            f.write(self.query + "\n")
 
 def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]):
     """Copy-pasted method of the original implementation for testing purposes"""
@@ -111,6 +123,7 @@ def vectorizer_tests():
     vectorizer.setQuery(sql_query, min_max_step, encoders)
     vector_vectorizer = vectorizer.vectorize()
     assert np.allclose(vector_vectorizer, vector_truth),  f"{vector_vectorizer} not close \n{vector_truth}"
+    vectorizer.save("/mnt/data/programming/tmp/")
 
     # loop test
     for query in [sql_query] * 10: 
@@ -125,9 +138,7 @@ def vectorizer_tests():
     # col[X] = (column_name, data_type)
     # min_max holds (min_value, max_value, 1) for each columns value range
     # encoders is dictonary. Only cols not of type integer have an encoder (LabelEncoder) mapped
-# SQL query examples
-# Postgres allows inner joins by where clauses:
-# SELECT * FROM title t1,cast_info t2 WHERE t1.id=t2.movie_id AND person_id < 2006305 AND role_id >= 1 AND kind_id < 2;
+
 if __name__ == "__main__":
     vectorizer_tests()
 
