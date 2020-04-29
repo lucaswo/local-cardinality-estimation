@@ -235,9 +235,11 @@ class MetaCollector:
         mm, encs = self.collect_meta(cols)
         self.close_database_connection()
 
-        result_dict = {"min_max_step": mm,
-                       "encodings": encs,
+        result_dict = {"tables": table_names,
                        "columns": cols,
+                       "join_attributes": join_atts,
+                       "min_max_step": mm,
+                       "encodings": encs,
                        "max_card": max_card}
 
         if save:
@@ -246,7 +248,7 @@ class MetaCollector:
             self.save_meta(result_dict)
 
         return result_dict
-    
+
 
 mc = MetaCollector()
 # example which should work -> takes quite a while to be processed
