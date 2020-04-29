@@ -9,15 +9,15 @@ from keras.optimizers import Adam
 
 
 class Estimator:
-    max_card_log: int = None
+    max_card: float = None
 
-    config: dict = None
-    data_x = None
-    data_y = None
+    config: Dict = None
+    data: Dict[str, np.ndarray] = {"x": None, "y": None}
 
     model: Model = None
 
-    def __init__(self, config: Dict[str, Any] = None, data_x=None, data_y=None, model: Model = None, debug: bool = True):
+    def __init__(self, config: Dict[str, Any] = None, data: Dict[str, np.ndarray] = None, model: Model = None,
+                 debug: bool = True):
 
         if config is None:
             with open("config.yaml") as file:
@@ -34,10 +34,7 @@ class Estimator:
             raise ValueError("Value for layer is needed! You can provide it with the config dict or in config.yaml!")
 
         self.config = config
-
-        self.data_x = data_x
-        self.data_y = data_y
-
+        self.data = data
         self.model = model
 
         if debug:
@@ -73,22 +70,52 @@ class Estimator:
 
     def normalize(self, y):
         y = np.log(y)
-        if self.max_card_log is not None:
-            return (y - 0) / (self.max_card_log - 0)
-        else:
-            return (y - min(y)) / (max(y) - min(y))
+        # if self.max_card is not None:
+        #     return (y - 0) / (self.max_card - 0)
+        # else:
+        return (y - min(y)) / (max(y) - min(y))
 
     def q_loss(self, y_true, y_pred):
-        y_true = self.denormalize(y_true, 0, self.max_card_log)
-        y_pred = self.denormalize(y_pred, 0, self.max_card_log)
+        y_true = self.denormalize(y_true, 0, self.max_card)
+        y_pred = self.denormalize(y_pred, 0, self.max_card)
 
         return K.maximum(y_true, y_pred) / K.minimum(y_true, y_pred)
 
     def q_loss_np(self, y_true, y_pred):
-        y_true = self.denormalize_np(y_true, 0, self.max_card_log)
-        y_pred = self.denormalize_np(y_pred, 0, self.max_card_log)
+        y_true = self.denormalize_np(y_true, 0, self.max_card)
+        y_pred = self.denormalize_np(y_pred, 0, self.max_card)
 
         return np.maximum(y_true, y_pred) / np.minimum(y_true, y_pred)
+
+    def load_data_file(self, file_path: str):
+        data: Dict[str, np.ndarray] = {}
+        if file_path.split(".")[-1] == "csv":
+            loaded_data = np.genfromtxt(file_path, delimiter=",")
+        elif file_path.split(".")[-1] == "npy":
+            loaded_data = np.load(file_path)
+        else:
+            raise FileNotFoundError("No file found with path {}! Be sure to use a correct relative or an absolute path."
+                                    .format(file_path))
+
+        if loaded_data.shape[1] % 4 == 1:
+            data["x"] = np.delete(loaded_data, -1, 1)
+        elif loaded_data.shape[1] % 4 == 2:
+            data["postgres_estimate"] = loaded_data[:, -2]
+            data["x"] = np.delete(loaded_data, np.s_[-2:], 1)
+        elif loaded_data.shape[1] % 4 == 3:
+            data["postgres_estimate"] = loaded_data[:, -2]
+            data["x"] = np.delete(loaded_data, np.s_[-3:], 1)
+
+        data["y"] = loaded_data[:, -1]
+
+        self.set_data(data)
+
+    def set_data(self, data: Dict[str, np.ndarray]):
+        self.data = data
+
+        self.max_card = np.log(np.max(self.data["y"]))
+
+        self.data["y"] = self.normalize(self.data["y"])
 
     def split_data(self):
         print()
@@ -104,4 +131,4 @@ class Estimator:
 
 
 est = Estimator()
-est.get_model()
+est.load_data_file("vectors_census.csv")
