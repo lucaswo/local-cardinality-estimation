@@ -205,19 +205,20 @@ class MetaCollector:
         return min_max, encoders
 
     @staticmethod
-    def save_meta(meta_dict: Dict):
+    def save_meta(meta_dict: Dict, file_name: str = "meta_information"):
         """
         method for saving the meta-information to file
 
         :param meta_dict: the dictionary containing the meta-information to save
+        :param file_name: the name (without file-type) for the save-file
         :return: void
         """
 
-        with open("meta_information.yaml", "w") as file:
+        with open(file_name + ".yaml", "w") as file:
             yaml.safe_dump(meta_dict, file)
 
     def get_meta(self, table_names: List[str], columns: List[str], join_atts: List[Tuple[str, str]] = None,
-                 save: bool = True) -> Dict:
+                 save: bool = True, save_file_name: str = None) -> Dict:
         """
         function for the whole process of collecting the meta-information for the given tables joined on the given
         attributes and projected on the given columns
@@ -227,6 +228,7 @@ class MetaCollector:
         :param join_atts: attributes to join the tables on -> is optional, because there is no join if there is only one
             table and so there would be no join-attribute needed in that case
         :param save: boolean whether to save the meta-information to file
+        :param save_file_name: name for the save-file for the meta_information -> not needed if save==False
         :return: dictionary containing the meta-information
         """
 
@@ -244,8 +246,11 @@ class MetaCollector:
 
         if save:
             if self.debug:
-                print("Saving: {} to file".format(result_dict))
-            self.save_meta(result_dict)
+                print("Saving: {} to {}".format(result_dict, (save_file_name + ".yaml") if save_file_name else "file"))
+            if save_file_name:
+                self.save_meta(result_dict, save_file_name)
+            else:
+                self.save_meta(result_dict)
 
         return result_dict
 
