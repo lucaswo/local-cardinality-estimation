@@ -6,6 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 # Proposal: Do not call the vectorizer for each single query string, but collect them and then execute them parallelized
 
 def vectorize_query_original(query_str, min_max, encoders):
+    """Copy-pasted method of the original implementation for testing purposes"""
     query_str = query_str.replace("NULL", "-1").replace("IS NOT", "!=").replace(";", "")
     total_columns = len(min_max)
     vector = np.zeros(total_columns*4)
@@ -39,7 +40,7 @@ class Vectorizer:
     def __init__(self,query_str, min_max, encoders):
         self.n_max_expressions = 4
         self.expressions = query_str.split("WHERE", maxsplit=1)[1].split("AND")
-        assert self.n_max_expressions > self.expressions, f"Too many expressions concatinated by 'AND' given in query!"
+        assert self.n_max_expressions > self.expressions, f"Too many expressions concatinated by 'AND' in query!"
 
         self.min_max_step = min_max
         self.predicates = list(self.min_max_step.keys())
@@ -63,6 +64,8 @@ class Vectorizer:
         return predicate, operator, value
 
     def __normalize(self, predicate, value):
+        """Normalizes the value according to min-max statistics of the given predicate.
+        Normalization will never result in value of range (0,1]"""
         min_val, max_val, step = self.min_max_step[predicate]
         if predicate in self.encoders.keys():
             value = self.encoders[predicate].transform([int(value)])[0]
