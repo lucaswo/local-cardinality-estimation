@@ -24,7 +24,7 @@ class Vectorizer:
         }
         self.operator_code_length = len(next(iter(self.operators.values())))
 
-    def setQuery(self, query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]):
+    def set_query(self, query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]):
         """Reads a new query for another vectorisation task. Avoids Vectorizer object switch."""
 
         self.query = query
@@ -36,6 +36,14 @@ class Vectorizer:
         self.encoders = encoders
         self.n_total_columns = len(min_max)
         self.vector = np.zeros(self.n_total_columns * self.n_max_expressions)
+
+    def set_cardinality_estimation(self):
+        # TODO
+        print("Not yet implemented!")
+
+    def set_cardinality_truth(self):
+        # TODO
+        print("Not yet implemented!")
 
     def __parse_expression(self, expression: str) -> Tuple[str, str, int]:
         """Parses the given expression. Returns parse result: predicate, operator and value"""
