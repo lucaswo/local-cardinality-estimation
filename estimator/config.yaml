@@ -1,8 +1,7 @@
 # Neural Network
-width: 64
 layer:
-  - 64
-  - 32
+  - 512
+  - 256
 loss_function: mean_squared_error
 dropout: 0.2
 learning_rate: 0.0001
