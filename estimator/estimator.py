@@ -1,14 +1,20 @@
-from typing import Dict, Any
+from typing import Dict, Any, List, Union
 
 import numpy as np
 import yaml
 from keras import backend as K
+from keras.callbacks import History
 from keras.layers import Dense, Input, Dropout
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.optimizers import Adam
 
 
 class Estimator:
+    """
+    Class containing the neural network for cardinality estimation. The specifications of the neural network can be
+    changed in 'config.yaml'.
+    """
+
     max_card: float = None
     input_length: int = None
 
@@ -20,30 +26,68 @@ class Estimator:
     model: Model = None
 
     def __init__(self, config: Dict[str, Any] = None, data: Dict[str, np.ndarray] = None, model: Model = None,
-                 debug: bool = True):
+                 model_path: str = None, debug: bool = True):
+        """
+        Initializer for the Estimator.
 
-        if config is None:
-            with open("config.yaml") as file:
-                config = yaml.safe_load(file)
+        Configuration options for the neural network are optionally passed via a config dict.
+        It must contain at least the fields "loss_function", "dropout", "learning_rate", "kernel_initializer",
+        "activation_strategy" and "layer".
 
-        conf_keys = ["loss_function", "dropout", "learning_rate", "kernel_initializer", "activation_strategy"]
+        :param config: Only used if neither a model or a model_path is passed.
+            if given: It must contain at least the fields "loss_function", "dropout", "learning_rate",
+            "kernel_initializer", "activation_strategy" and "layer".
+            if not given: the config file 'config.yaml' is used for these settings.
+        :param data: Optional parameter for giving the data for training and testing. If given it has to be a Dict with
+            at least "x" and "y" and optionally "postgres_estimate" as keys. The values have to be numpy.ndarray. For
+            key "x" it should be the vectorized queries, for key "y" the true cardinalities in the same order and for
+            optional key "postgres_estimate" the estimation of the postgres optimizer for the query.
+        :param model: Option to pass a Model which can be used.
+        :param model_path: Option to pass a path to a saved model in an .h5 file.
+        :param debug: Boolean whether to print additional information while processing.
+        """
 
-        for key in conf_keys:
-            if config[key] is None or config[key] == "":
+        if model:
+            self.model = model
+        elif model_path:
+            self.model = load_model(model_path)
+        else:
+            if config is None:
+                with open("config.yaml") as file:
+                    config = yaml.safe_load(file)
+
+            conf_keys = ["loss_function", "dropout", "learning_rate", "kernel_initializer", "activation_strategy"]
+
+            for key in conf_keys:
+                if config[key] is None or config[key] == "":
+                    raise ValueError(
+                        "Value for {} is needed! You can provide it with the config dict or in config.yaml!".format(
+                            key))
+
+            if config["layer"] is None or config["layer"] == "" or len(config["layer"]) < 1:
                 raise ValueError(
-                    "Value for {} is needed! You can provide it with the config dict or in config.yaml!".format(key))
+                    "Value for layer is needed! You can provide it with the config dict or in config.yaml!")
 
-        if config["layer"] is None or config["layer"] == "" or len(config["layer"]) < 1:
-            raise ValueError("Value for layer is needed! You can provide it with the config dict or in config.yaml!")
+            self.config = config
+            if debug:
+                print("Initialized Estimator with {}".format(config))
 
-        self.config = config
         self.data = data
-        self.model = model
 
-        if debug:
-            print("Initialized Estimator with {}".format(config))
+    def get_model(self, len_input: int, override: bool = False) -> Model:
+        """
+        Function for creating the model of the neural network with the information from self.config
 
-    def get_model(self, len_input: int) -> Model:
+        :param len_input: The size of the input vector.
+        :param override: Whether an existing model should be overridden.
+        :return: The model for the neural network with the given properties.
+        """
+
+        if self.model and not override:
+            print("You already have a model defined. Please use override=True as parameter when you want to create a "
+                  "new one.")
+            return self.model
+
         if not len_input:
             raise ValueError("You should load the data before creating a model, because the model needs to know the "
                              "size of the input-vector!")
@@ -67,14 +111,34 @@ class Estimator:
         return self.model
 
     @staticmethod
-    def denormalize(y, y_min, y_max):
+    def denormalize(y, y_min: float, y_max: float):
+        """
+        :param y: tensor filled with values to denormalize
+        :param y_min: minimum value for y
+        :param y_max: maximum value for y
+        :return: tensor with denormalized values
+        """
+
         return K.exp(y * (y_max - y_min) + y_min)
 
     @staticmethod
-    def denormalize_np(y, y_min, y_max):
+    def denormalize_np(y: np.ndarray, y_min: float, y_max: float) -> np.ndarray:
+        """
+        :param y: numpy-array filled with values to denormalize
+        :param y_min: minimum value for y
+        :param y_max: maximum value for y
+        :return: numpy-array with denormalized values
+        """
+
         return np.exp(y * (y_max - y_min) + y_min)
 
-    def normalize(self, y):
+    @staticmethod
+    def normalize(y: np.ndarray) -> np.ndarray:
+        """
+        :param y: numpy-array with unnormalized values
+        :return: numpy-array with normalized values
+        """
+
         y = np.log(y)
         # if self.max_card is not None:
         #     return (y - 0) / (self.max_card - 0)
@@ -87,13 +151,27 @@ class Estimator:
 
         return K.maximum(y_true, y_pred) / K.minimum(y_true, y_pred)
 
-    def q_loss_np(self, y_true, y_pred):
+    def q_loss_np(self, y_true, y_pred) -> np.ndarray:
         y_true = self.denormalize_np(y_true, 0, self.max_card)
         y_pred = self.denormalize_np(y_pred, 0, self.max_card)
 
         return np.maximum(y_true, y_pred) / np.minimum(y_true, y_pred)
 
-    def load_data_file(self, file_path: str):
+    def load_data_file(self, file_path: str, override: bool = False) -> Dict[str, np.ndarray]:
+        """
+        Method for loading the data from file.
+
+        :param file_path: Path for the file where the data is stored. Has to be a .csv or .npy file.
+        :param override: Boolean whether to override already existing data.
+        :return: The data which is set for the Estimator.
+        """
+
+        if self.data and not override and "x" in self.data and self.data["x"] is not None and "y" in self.data and \
+                self.data["y"] is not None:
+            print("You already have loaded data. Please use override=True as parameter when you want to override this"
+                  " data.")
+            return self.data
+
         data: Dict[str, np.ndarray] = {}
         if file_path.split(".")[-1] == "csv":
             loaded_data = np.genfromtxt(file_path, delimiter=",")
@@ -114,9 +192,28 @@ class Estimator:
 
         data["y"] = loaded_data[:, -1]
 
-        self.set_data(data)
+        self.set_data(data, override)
 
-    def set_data(self, data: Dict[str, np.ndarray]):
+        return self.data
+
+    def set_data(self, data: Dict[str, np.ndarray], override: bool = False):
+        """
+        Method for setting data and dependent values like max_card and input_length. This includes a normalization of
+        the true cardinalities
+
+        :param data: Dictionary which must at least contain keys "x" and "y" and as values np.ndarray for each.
+        :param override: Boolean whether to override already existing data.
+        """
+
+        if self.data and not override and "x" in self.data and self.data["x"] is not None and "y" in self.data and \
+                self.data["y"] is not None:
+            print("You already have loaded data. Please use override=True as parameter when you want to override this"
+                  " data.")
+            return self.data
+
+        if data is None or "x" not in data or data["x"] is None or "y" not in data or data["y"] is None:
+            raise KeyError("The given parameter data doesn't contain the data as expected.")
+
         self.data = data
 
         self.max_card = np.log(np.max(self.data["y"]))
@@ -126,7 +223,14 @@ class Estimator:
         self.data["y"] = self.normalize(self.data["y"])
 
     def split_data(self, split: float = 0.9):
-        if "x" not in self.data or self.data["x"] is None:
+        """
+        Function to split the data into training- and test-set by a parameterized split value.
+
+        :param split: Percentage of the data going into training set. (split=0.9 means 90% of data is training set)
+        """
+
+        if self.data is None or "x" not in self.data or self.data["x"] is None or "y" not in self.data or \
+                self.data["y"] is None:
             raise KeyError("You're trying to split data you haven't even loaded! Be sure to load data before attempting"
                            " to split it!")
 
@@ -144,7 +248,22 @@ class Estimator:
             self.test_data["postgres_estimate"] = self.data["postgres_estimate"][not_sample]
 
     def train(self, epochs: int = 100, verbose: int = 0, shuffle: bool = True, batch_size: int = 32,
-              validation_split: float = 0.1):
+              validation_split: float = 0.1) -> Union[History, History]:
+        """
+        Method for training the before created Model.
+
+        :param epochs: Number of epochs for training.
+        :param verbose: How much information to print while training. 0 = silent, 1 = progress bar, 2 = one line per
+            epoch.
+        :param shuffle: Whether to shuffle the training data -> not necessary if split was done by numpy.random.choice()
+        :param batch_size: Size for the batches -> Smaller batches may be able to train the neural network better
+            (possibly) but enlarge training time, while bigger batches may lead to a less well trained network while
+            training faster.
+        :param validation_split: How much of the data should be taken as validation set -> these are taken from the
+            training data, not the test data, and are reselected for every epoch.
+        :return: Training history as dict.
+        """
+
         if "x" not in self.training_data or self.training_data["x"] is None or "y" not in self.training_data or \
                 self.training_data["y"] is None:
             raise KeyError("You're trying to train the network without loading data! Be sure to load data before "
@@ -155,7 +274,13 @@ class Estimator:
         return self.model.fit(self.training_data["x"], self.training_data["y"], epochs=epochs, verbose=verbose,
                               shuffle=shuffle, batch_size=batch_size, validation_split=validation_split)
 
-    def test(self):
+    def test(self) -> np.ndarray:
+        """
+        Let the trained neural network predict the test data.
+
+        :return: numpy-array containing the normalized predictions of the neural network for the test data
+        """
+
         if "x" not in self.test_data or self.test_data["x"] is None or "y" not in self.test_data or \
                 self.test_data["y"] is None:
             raise KeyError("You're trying to test the network without loading data! Be sure to load data before "
@@ -165,30 +290,58 @@ class Estimator:
 
         return self.model.predict(self.test_data["x"])
 
-    def predict(self, data: np.ndarray):
+    def predict(self, data: np.ndarray) -> np.ndarray:
+        """
+        Let the trained neural network predict the given data.
+
+        :param data: numpy-array containing at least one vectorized query which should be predicted
+        :return: numpy-array containing the normalized predictions of the neural network for the given data
+        """
+
         if not self.model:
             raise ValueError("You haven't built a model to predict with, yet.")
 
         return self.model.predict(data)
 
-    def run(self, data_file_path: str, epochs: int = 100, verbose: int = 1, shuffle: bool = True, batch_size: int = 32,
-            validation_split: float = 0.1, save_history: bool = True):
-        self.load_data_file(data_file_path)
+    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 0, shuffle: bool = True, batch_size: int = 32,
+            validation_split: float = 0.1) -> np.ndarray:
+        """
+        Method for a full run of the Estimator, with training and testing.
+
+        :param data_file_path: Optional path to saved data file. Only necessary if no data has been set before.
+        :param epochs: Number of epochs for training.
+        :param verbose: How much information to print while training. 0 = silent, 1 = progress bar, 2 = one line per
+            epoch.
+        :param shuffle: Whether to shuffle the training data -> not necessary if split was done by numpy.random.choice()
+        :param batch_size: Size for the batches -> Smaller batches may be able to train the neural network better
+            (possibly) but enlarge training time, while bigger batches may lead to a less well trained network while
+            training faster.
+        :param validation_split: How much of the data should be taken as validation set -> these are taken from the
+            training data, not the test data, and are reselected for every epoch.
+        :return: A numpy.ndarray containing the calculated q-error.
+        """
+
+        if data_file_path:
+            self.load_data_file(data_file_path)
         self.split_data()
         self.get_model(self.input_length)
         history = self.train(epochs=epochs, verbose=verbose, shuffle=shuffle, batch_size=batch_size,
                              validation_split=validation_split)
         predictions = self.test()
 
-        if save_history:
-            self.save_history(history.history)
-
-        q_error_means = [np.mean(self.q_loss_np(self.test_data["y"], predictions[:, 0]))]
+        q_error_means = np.mean(self.q_loss_np(self.test_data["y"], predictions[:, 0]))
 
         return q_error_means
 
+    def save_model(self, filename: str = "model"):
+        """
+        Method for saving the Model to file.
 
-# TODO: add documentation, add safety-features, add save-methods
+        :param filename: Name of the file where the model should be stored. (Without file ending. ".h5" is added to the
+            filename)
+        """
 
-est = Estimator()
-est.run("vectors_census.csv", epochs=1)
+        if self.model:
+            self.model.save("{}.h5".format(filename))
+        else:
+            raise ValueError("No model for saving defined!")
