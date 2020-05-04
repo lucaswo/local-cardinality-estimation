@@ -7,7 +7,7 @@ import os.path
 # Proposal: Do not call the vectorizer for each single query string, but collect them and then execute them parallelized
 
 class Vectorizer:
-    """Constructs a vector consisting of operator code and normalized value for each predicate in the sql query set with setQuery."""
+    """Constructs a vector consisting of operator code and normalized value for each predicate in the sql query set with set_query method."""
     
     def __init__(self):
         """ Intitialises the Vectorizer object by defining available operators and maximum numbers of expressions allowed within a query. Returns the obejct."""
@@ -23,6 +23,9 @@ class Vectorizer:
             "IS": [0,0,1]
         }
         self.operator_code_length = len(next(iter(self.operators.values())))
+        self.cardinality_estimation_postgres = None
+        self.cardinality_truth = None
+        self.vector = None
 
     def set_query(self, query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]):
         """Reads a new query for another vectorisation task. Avoids Vectorizer object switch."""
@@ -37,13 +40,20 @@ class Vectorizer:
         self.n_total_columns = len(min_max)
         self.vector = np.zeros(self.n_total_columns * self.n_max_expressions)
 
-    def set_cardinality_estimation(self):
-        # TODO
+    def add_query(self):
+        #TODO
         print("Not yet implemented!")
 
-    def set_cardinality_truth(self):
-        # TODO
+    def vectorize_batch(self):
+        #TODO
         print("Not yet implemented!")
+
+    def set_cardinality_estimation(self, cardinality):
+        self.cardinality_estimation_postgres = cardinality
+
+    def set_cardinality_truth(self, cardinality):
+        self.cardinality_truth = cardinality
+        
 
     def __parse_expression(self, expression: str) -> Tuple[str, str, int]:
         """Parses the given expression. Returns parse result: predicate, operator and value"""
@@ -63,7 +73,7 @@ class Vectorizer:
         return (value - min_val + step) / (max_val - min_val + step)
     
     def vectorize(self) -> np.ndarray:
-        """Vectorizes the query given. Returns the vector."""
+        """Vectorizes the query given. Returns the a triple containing (vector, estimated cardinality, true cardinality). If cardinalities not set beforehand None or old value is returned."""
 
         for expression in self.expressions:
             predicate, operator, value = self.__parse_expression(expression)
@@ -73,7 +83,7 @@ class Vectorizer:
             end_idx = idx * self.n_max_expressions + self.operator_code_length
             self.vector[idx*self.n_max_expressions:end_idx] = self.operators[operator]
             self.vector[end_idx] = normalized_value
-        return self.vector
+        return self.vector, self.cardinality_estimation_postgres, self.cardinality_truth
 
     def save(self, path: str):
         """Stores the SQL query and corresponding vector at given path"""
