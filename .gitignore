@@ -157,3 +157,6 @@ gen
 meta-collector/
 sql-generator/
 vectorizer/
+
+#MacOS specific files
+.DS_Store
