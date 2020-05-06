@@ -288,7 +288,7 @@ class Estimator:
         if not self.model:
             raise ValueError("You haven't built a model to test yet.")
 
-        return self.model.predict(self.test_data["x"])
+        return self.model.predict(self.test_data["x"]).flatten()
 
     def predict(self, data: np.ndarray) -> np.ndarray:
         """
@@ -301,10 +301,10 @@ class Estimator:
         if not self.model:
             raise ValueError("You haven't built a model to predict with, yet.")
 
-        return self.model.predict(data)
+        return self.model.predict(data).flatten()
 
-    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 0, shuffle: bool = True, batch_size: int = 32,
-            validation_split: float = 0.1) -> np.ndarray:
+    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 0, shuffle: bool = True,
+            batch_size: int = 32, validation_split: float = 0.1, override_model: bool = False) -> np.ndarray:
         """
         Method for a full run of the Estimator, with training and testing.
 
@@ -318,6 +318,7 @@ class Estimator:
             training faster.
         :param validation_split: How much of the data should be taken as validation set -> these are taken from the
             training data, not the test data, and are reselected for every epoch.
+        :param override_model: Whether to override a probably already existing model.
         :return: A numpy.ndarray containing the calculated q-error.
         """
 
@@ -329,7 +330,7 @@ class Estimator:
                              validation_split=validation_split)
         predictions = self.test()
 
-        q_error_means = np.mean(self.q_loss_np(self.test_data["y"], predictions[:, 0]))
+        q_error_means = np.mean(self.q_loss_np(self.test_data["y"], predictions))
 
         return q_error_means
 
