@@ -154,6 +154,7 @@ class MetaCollector:
             sql = """ANALYZE tmpview; ANALYZE tmpview_cube;"""
         else:
             sql = """ANALYZE tmpview;"""
+
         if self.debug:
             print("Executing: {}".format(sql))
         self.cur.execute(sql)
@@ -217,8 +218,8 @@ class MetaCollector:
         with open(file_name + ".yaml", "w") as file:
             yaml.safe_dump(meta_dict, file)
 
-    def get_meta(self, table_names: List[str], columns: List[str], join_atts: List[Tuple[str, str]] = None,
-                 save: bool = True, save_file_name: str = None) -> Dict:
+    def get_meta_single(self, table_names: List[str], columns: List[str], join_atts: List[Tuple[str, str]] = None,
+                        save: bool = True, save_file_name: str = None, batchmode: bool = False) -> Dict:
         """
         function for the whole process of collecting the meta-information for the given tables joined on the given
         attributes and projected on the given columns
@@ -229,13 +230,19 @@ class MetaCollector:
             table and so there would be no join-attribute needed in that case
         :param save: boolean whether to save the meta-information to file
         :param save_file_name: name for the save-file for the meta_information -> not needed if save==False
+        :param batchmode: whether the meta data is collected in batches or not -> connection to db held open if batch
+            mode
         :return: dictionary containing the meta-information
         """
 
-        self.open_database_connection()
+        if not batchmode:
+            self.open_database_connection()
+
         cols, max_card = self.setup_view(table_names, columns, join_atts, True)
         mm, encs = self.collect_meta(cols)
-        self.close_database_connection()
+
+        if not batchmode:
+            self.close_database_connection()
 
         result_dict = {"tables": table_names,
                        "columns": cols,
@@ -254,7 +261,36 @@ class MetaCollector:
 
         return result_dict
 
+    def get_meta_batch(self, file_path: str):
+        solution_dict = {}
+
+        with open(file_path) as file:
+            batch = yaml.safe_load(file)
+
+        self.open_database_connection()
+
+        for index in batch:
+            table_names = []
+            for tpl in batch[index]["table_names"]:
+                table_names.append(" ".join([tpl[0], tpl[1]]))
+            join_attributes = []
+            for attr in batch[index]["join_attributes"]:
+                attr = attr.split("=")
+                join_attributes.append((attr[0], attr[1]))
+            solution_dict[index] = self.get_meta_single(table_names=table_names,
+                                                        columns=batch[index]["selection_attributes"],
+                                                        join_atts=join_attributes,
+                                                        save=False,
+                                                        batchmode=True)
+            if index == 3:
+                break
+
+        self.close_database_connection()
+
+# TODO: find solution for aliases in setup_view
+
 
 mc = MetaCollector()
 # example which should work -> takes quite a while to be processed
-mc.get_meta(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
+# mc.get_meta_single(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
+mc.get_meta_batch("../crawler/solution_dict.yaml")
