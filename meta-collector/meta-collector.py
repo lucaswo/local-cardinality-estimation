@@ -87,16 +87,18 @@ class MetaCollector:
                 print("Closing connection to postgres")
             self.conn.close()
 
-    def setup_view(self, table_names: List[str], columns: List[str], join_atts: List[Tuple[str, str]] = None,
-                   cube: bool = False) -> (List[Tuple[str, str]], int):
+    def setup_view(self, table_names: List[str or Tuple[str, str]], columns: List[str],
+                   join_atts: List[str or Tuple[str, str]] = None, cube: bool = False) -> (List[Tuple[str, str]], int):
         """
-        create the tables tmpview and if cube==True also tmpview_cube containing the metadata for the given tables
-        joined on the attributes and projected on the columns
+        Create the tables tmpview and if cube==True also tmpview_cube containing the metadata for the given tables
+        joined on the attributes and projected on the columns.
 
-        :param table_names: tables to join
+        :param table_names: List of names of tables, as strings or tuples containing table-name in first and alias in
+            second place, to join.
         :param columns: columns to project on
-        :param join_atts: attributes to join the tables on -> is optional, because there is no join if there is only one
-            table and so there is no join-attribute needed in that case
+        :param join_atts: List of attributes, as strings or tuples containing the two attributes to join with '=', to
+            join the tables on. -> is optional, because there is no join if there is only one table and so there would
+            be no join-attribute needed in that case
         :param cube: boolean whether to create the *_cube table, too
         :return: first: a list of tuples containing the name and the datatype for the columns, each as string
             second: the maximal cardinality as integer
@@ -104,7 +106,7 @@ class MetaCollector:
 
         if not self.cur:
             raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
-                                  "'open_database_connection' befrore this method.")
+                                  "'open_database_connection' before this method.")
 
         # drops maybe already existing tables with metadata
         sql = """DROP TABLE IF EXISTS tmpview; DROP TABLE IF EXISTS tmpview_cube;"""
@@ -113,9 +115,16 @@ class MetaCollector:
         self.cur.execute(sql)
 
         # get column-name and datatype for the requested columns of the corresponding tables
+        if isinstance(table_names[0], list) or isinstance(table_names[0], tuple):
+            tables_string = "','".join(tab[0] for tab in table_names)
+            columns_string = "','".join(column.split(".")[-1] for column in columns)
+        else:
+            tables_string = "','".join(table_names)
+            columns_string = "','".join(columns)
+
         sql = """SELECT column_name, data_type FROM information_schema.columns 
                      WHERE table_schema = 'public' AND table_name IN ('{}') 
-                     AND column_name IN ('{}') ORDER BY 1;""".format("','".join(table_names), "','".join(columns))
+                     AND column_name IN ('{}') ORDER BY 1;""".format(tables_string, columns_string)
         if self.debug:
             print("Executing: {}".format(sql))
         self.cur.execute(sql)
@@ -126,17 +135,24 @@ class MetaCollector:
         # create table with the tuples for the given tables (join-result if
         # more than one table) with projection on the given columns
         if len(table_names) > 1:
-            sql = """CREATE TABLE tmpview AS (SELECT {} FROM {} WHERE {});""".format(
-                ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
-                          else "{col}".format(col=col[0]) for col in columns_types]),
-                ",".join(["{} t{}".format(tab, i + 1) for i, tab in enumerate(table_names)]),
-                " AND ".join(["t{}.{} = t{}.{}".format(1, join[0], i + 2, join[1])
-                              for i, join in enumerate(join_atts)]))
+            if isinstance(table_names[0], list) or isinstance(table_names[0], tuple):
+                tables_string = ",".join(["{} {}".format(tab[0], tab[1]) for tab in table_names])
+                columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
+                                           else "{}".format(col) for col in columns])
+                attributes_string = " AND ".join(["{}".format(join) for join in join_atts])
+            else:
+                tables_string = ",".join(["{} t{}".format(tab, i + 1) for i, tab in enumerate(table_names)])
+                columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
+                                           else "{col}".format(col=col[0]) for col in columns_types])
+                attributes_string = " AND ".join(["t{}.{} = t{}.{}".format(1, join[0], i + 2, join[1]) for i, join in
+                                                  enumerate(join_atts)])
+
+            sql = """CREATE TABLE tmpview AS (SELECT {} FROM {} WHERE {});""".format(columns_string, tables_string,
+                                                                                     attributes_string)
         else:
-            sql = """CREATE TABLE tmpview AS (SELECT {} FROM {});""".format(
-                ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
-                          else "{col}".format(col=col[0]) for col in columns_types]),
-                table_names[0])
+            columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
+                                       else "{col}".format(col=col[0]) for col in columns_types])
+            sql = """CREATE TABLE tmpview AS (SELECT {} FROM {});""".format(columns_string, table_names[0])
 
         if self.debug:
             print("Executing: {}".format(sql))
@@ -146,7 +162,7 @@ class MetaCollector:
             sql = """CREATE TABLE tmpview_cube AS (SELECT {col}, count(*)::integer, 0.0 as perc FROM tmpview 
                 GROUP BY GROUPING SETS(({col})));
                 UPDATE tmpview_cube SET perc = count/(SELECT SUM(count) FROM tmpview_cube);""".format(
-                col=",".join(columns))
+                col=",".join(column.split(".")[-1] for column in columns))
             if self.debug:
                 print("Executing: {}".format(sql))
             self.cur.execute(sql)
@@ -205,29 +221,19 @@ class MetaCollector:
 
         return min_max, encoders
 
-    @staticmethod
-    def save_meta(meta_dict: Dict, file_name: str = "meta_information"):
+    def get_meta_single(self, table_names: List[str or Tuple[str, str]], columns: List[str],
+                        join_atts: List[str or Tuple[str, str]] = None, save: bool = True, save_file_name: str = None,
+                        batchmode: bool = False) -> Dict:
         """
-        method for saving the meta-information to file
+        Method for the whole process of collecting the meta-information for the given tables joined on the given
+        attributes and projected on the given columns.
 
-        :param meta_dict: the dictionary containing the meta-information to save
-        :param file_name: the name (without file-type) for the save-file
-        :return: void
-        """
-
-        with open(file_name + ".yaml", "w") as file:
-            yaml.safe_dump(meta_dict, file)
-
-    def get_meta_single(self, table_names: List[str], columns: List[str], join_atts: List[Tuple[str, str]] = None,
-                        save: bool = True, save_file_name: str = None, batchmode: bool = False) -> Dict:
-        """
-        function for the whole process of collecting the meta-information for the given tables joined on the given
-        attributes and projected on the given columns
-
-        :param table_names: list of the name of tables to join
-        :param columns: name of the columns to project on
-        :param join_atts: attributes to join the tables on -> is optional, because there is no join if there is only one
-            table and so there would be no join-attribute needed in that case
+        :param table_names: List of names of tables, as strings or tuples containing table-name in first and alias in
+            second place, to join.
+        :param columns: List of names of columns, as strings, to project on.
+        :param join_atts: List of attributes, as strings or tuples containing the two attributes to join with '=', to
+            join the tables on. -> is optional, because there is no join if there is only one table and so there would
+            be no join-attribute needed in that case
         :param save: boolean whether to save the meta-information to file
         :param save_file_name: name for the save-file for the meta_information -> not needed if save==False
         :param batchmode: whether the meta data is collected in batches or not -> connection to db held open if batch
@@ -241,15 +247,27 @@ class MetaCollector:
         cols, max_card = self.setup_view(table_names, columns, join_atts, True)
         mm, encs = self.collect_meta(cols)
 
+        for index, col in enumerate(cols):
+            for column in columns:
+                column_parts = column.split(".")
+                if len(column_parts) > 1 and col[0] == column_parts[-1]:
+                    cols[index] = (col[0], column_parts[0], col[1])
+                    break
+                elif len(column_parts) <= 1:
+                    break
+
         if not batchmode:
             self.close_database_connection()
 
-        result_dict = {"tables": table_names,
+        result_dict = {"table_names": table_names,
                        "columns": cols,
                        "join_attributes": join_atts,
                        "min_max_step": mm,
                        "encodings": encs,
                        "max_card": max_card}
+
+        if not batchmode:
+            result_dict = {0: result_dict}
 
         if save:
             if self.debug:
@@ -261,7 +279,7 @@ class MetaCollector:
 
         return result_dict
 
-    def get_meta_batch(self, file_path: str):
+    def get_meta_batch(self, file_path: str, save: bool = True, save_file_name: str = None):
         solution_dict = {}
 
         with open(file_path) as file:
@@ -270,24 +288,37 @@ class MetaCollector:
         self.open_database_connection()
 
         for index in batch:
-            table_names = []
-            for tpl in batch[index]["table_names"]:
-                table_names.append(" ".join([tpl[0], tpl[1]]))
-            join_attributes = []
-            for attr in batch[index]["join_attributes"]:
-                attr = attr.split("=")
-                join_attributes.append((attr[0], attr[1]))
-            solution_dict[index] = self.get_meta_single(table_names=table_names,
+            solution_dict[index] = self.get_meta_single(table_names=batch[index]["table_names"],
                                                         columns=batch[index]["selection_attributes"],
-                                                        join_atts=join_attributes,
-                                                        save=False,
-                                                        batchmode=True)
-            if index == 3:
+                                                        join_atts=batch[index]["join_attributes"],
+                                                        save=False, batchmode=True)
+
+            if index == 1:
                 break
 
         self.close_database_connection()
 
-# TODO: find solution for aliases in setup_view
+        if save:
+            if save_file_name:
+                self.save_meta(solution_dict, save_file_name)
+            else:
+                self.save_meta(solution_dict)
+
+    @staticmethod
+    def save_meta(meta_dict: Dict, file_name: str = "meta_information"):
+        """
+        Method for saving the meta-information to file.
+
+        :param meta_dict: the dictionary containing the meta-information to save
+        :param file_name: the name (without file-type) for the save-file
+        :return: void
+        """
+
+        with open(file_name + ".yaml", "w") as file:
+            yaml.safe_dump(meta_dict, file)
+
+
+# TODO: find solution for problem with double selection predicate
 
 
 mc = MetaCollector()
