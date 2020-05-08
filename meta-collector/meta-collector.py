@@ -340,18 +340,17 @@ class MetaCollector:
 
         return solution_dict
 
-    @staticmethod
-    def save_meta(meta_dict: Dict, file_name: str = "meta_information", mode: str = "w"):
+    def save_meta(self, meta_dict: Dict, file_name: str = "meta_information", mode: str = "w"):
         """
         Method for saving the meta-information to file.
 
         :param meta_dict: the dictionary containing the meta-information to save
         :param file_name: the name (without file-type) for the save-file
         :param mode: The mode to open the file. Some common possibilities are 'w', 'w+', 'r', 'a', 'a+'
-        :return: void
         """
-
-        print("Saving: {} to {}".format(meta_dict, (file_name + ".yaml") if file_name else "file"))
+        
+        if self.debug:
+            print("Saving: {} to {}".format(meta_dict, (file_name + ".yaml") if file_name else "file"))
 
         with open(file_name + ".yaml", mode) as file:
             yaml.safe_dump(meta_dict, file)
