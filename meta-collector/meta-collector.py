@@ -234,6 +234,14 @@ class MetaCollector:
         return min_max, encoders
 
     def eliminate_duplicates(self, columns: List[str]) -> List[str]:
+        """
+        This method is responsible for solving the problem of column-names existing at least double. Therefore it adds
+        an alias which is build from the table-alias _ column-name.
+
+        :param columns: List of strings of the column-names
+        :return: List of strings of the column-names, without duplicates.
+        """
+
         already_seen = []
         for index, column in enumerate(columns):
             column_split = column.split(".")
@@ -299,6 +307,16 @@ class MetaCollector:
         return result_dict
 
     def get_meta_from_file(self, file_path: str, save: bool = True, save_file_name: str = None) -> Dict[int, any]:
+        """
+        Method for collecting meta data for the information given in a file from Crawler or at least a file formatted
+        like this.
+
+        :param file_path: Path to the file. Format has to be the same like the output of Crawler
+        :param save: Whether to save the information to file or not. -> It is recommended to do so.
+        :param save_file_name: Optional name for the file.
+        :return: The solution dict.
+        """
+
         solution_dict = {}
 
         with open(file_path) as file:
@@ -307,9 +325,9 @@ class MetaCollector:
         self.open_database_connection()
 
         for index in batch:
-            solution_dict = {index: self.get_meta(table_names=batch[9]["table_names"],
-                                                  columns=batch[9]["selection_attributes"],
-                                                  join_atts=batch[9]["join_attributes"],
+            solution_dict = {index: self.get_meta(table_names=batch[index]["table_names"],
+                                                  columns=batch[index]["selection_attributes"],
+                                                  join_atts=batch[index]["join_attributes"],
                                                   save=False, batchmode=True)}
 
             if save:
@@ -337,9 +355,6 @@ class MetaCollector:
 
         with open(file_name + ".yaml", mode) as file:
             yaml.safe_dump(meta_dict, file)
-
-
-# TODO: find solution for problem with double selection predicate
 
 
 mc = MetaCollector()
