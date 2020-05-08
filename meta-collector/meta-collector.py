@@ -116,27 +116,39 @@ class MetaCollector:
 
         # get column-name and datatype for the requested columns of the corresponding tables
         if isinstance(table_names[0], list) or isinstance(table_names[0], tuple):
-            tables_string = "','".join(tab[0] for tab in table_names)
             columns_string = "','".join(column.split(".")[-1] for column in columns)
         else:
-            tables_string = "','".join(table_names)
             columns_string = "','".join(columns)
 
-        sql = """SELECT column_name, data_type FROM information_schema.columns 
-                     WHERE table_schema = 'public' AND table_name IN ('{}') 
-                     AND column_name IN ('{}') ORDER BY 1;""".format(tables_string, columns_string)
-        if self.debug:
-            print("Executing: {}".format(sql))
-        self.cur.execute(sql)
+        columns_types = []
 
-        # get all remaining rows from the result set
-        columns_types = self.cur.fetchall()
+        for table_name in table_names:
+            if isinstance(table_name, list) or isinstance(table_name, tuple):
+                sql = """SELECT column_name, data_type FROM information_schema.columns 
+                                     WHERE table_schema = 'public' AND table_name = '{}'
+                                     AND column_name IN ('{}') ORDER BY 1;""".format(table_name[0], columns_string)
+            else:
+                sql = """SELECT column_name, data_type FROM information_schema.columns 
+                                     WHERE table_schema = 'public' AND table_name IN ('{}') 
+                                     AND column_name IN ('{}') ORDER BY 1;""".format(table_name, columns_string)
+            if self.debug:
+                print("Executing: {}".format(sql))
+            self.cur.execute(sql)
+
+            # get all remaining rows from the result set
+            column_type = self.cur.fetchall()
+            for column in column_type:
+                if isinstance(table_name, list) or isinstance(table_name, tuple):
+                    columns_types.append((column[0], table_name[1], column[1]))
+                else:
+                    columns_types.append((column[0], table_name, column[1]))
 
         # create table with the tuples for the given tables (join-result if
         # more than one table) with projection on the given columns
         if len(table_names) > 1:
             if isinstance(table_names[0], list) or isinstance(table_names[0], tuple):
                 tables_string = ",".join(["{} {}".format(tab[0], tab[1]) for tab in table_names])
+                columns = self.eliminate_duplicates(columns)
                 columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
                                            else "{}".format(col) for col in columns])
                 attributes_string = " AND ".join(["{}".format(join) for join in join_atts])
@@ -184,7 +196,7 @@ class MetaCollector:
 
         return columns_types, max_card
 
-    def collect_meta(self, columns: List[Tuple[str, str]]) -> (Dict[str, Tuple[int, int, int]], Dict):
+    def collect_meta(self, columns: List[Tuple[str, str, str]]) -> (Dict[str, Tuple[int, int, int]], Dict):
         """
         after execution of setup_view this function returns the min and max values for the meta-table and the encoders
 
@@ -221,9 +233,20 @@ class MetaCollector:
 
         return min_max, encoders
 
-    def get_meta_single(self, table_names: List[str or Tuple[str, str]], columns: List[str],
-                        join_atts: List[str or Tuple[str, str]] = None, save: bool = True, save_file_name: str = None,
-                        batchmode: bool = False) -> Dict:
+    def eliminate_duplicates(self, columns: List[str]) -> List[str]:
+        already_seen = []
+        for index, column in enumerate(columns):
+            column_split = column.split(".")
+            if column_split[-1] not in already_seen:
+                already_seen.append(column_split[-1])
+            else:
+                columns[index] = "{} {}".format(column, "_".join(column_split))
+
+        return columns
+
+    def get_meta(self, table_names: List[str or Tuple[str, str]], columns: List[str],
+                 join_atts: List[str or Tuple[str, str]] = None, save: bool = True, save_file_name: str = None,
+                 batchmode: bool = False) -> Dict:
         """
         Method for the whole process of collecting the meta-information for the given tables joined on the given
         attributes and projected on the given columns.
@@ -247,14 +270,12 @@ class MetaCollector:
         cols, max_card = self.setup_view(table_names, columns, join_atts, True)
         mm, encs = self.collect_meta(cols)
 
+        already_seen = []
         for index, col in enumerate(cols):
-            for column in columns:
-                column_parts = column.split(".")
-                if len(column_parts) > 1 and col[0] == column_parts[-1]:
-                    cols[index] = (col[0], column_parts[0], col[1])
-                    break
-                elif len(column_parts) <= 1:
-                    break
+            if col[0] not in already_seen:
+                already_seen.append(col[0])
+            else:
+                cols[index] = (col[0], col[1], col[2], "_".join([col[1], col[0]]))
 
         if not batchmode:
             self.close_database_connection()
@@ -270,8 +291,6 @@ class MetaCollector:
             result_dict = {0: result_dict}
 
         if save:
-            if self.debug:
-                print("Saving: {} to {}".format(result_dict, (save_file_name + ".yaml") if save_file_name else "file"))
             if save_file_name:
                 self.save_meta(result_dict, save_file_name)
             else:
@@ -279,7 +298,7 @@ class MetaCollector:
 
         return result_dict
 
-    def get_meta_batch(self, file_path: str, save: bool = True, save_file_name: str = None):
+    def get_meta_from_file(self, file_path: str, save: bool = True, save_file_name: str = None) -> Dict[int, any]:
         solution_dict = {}
 
         with open(file_path) as file:
@@ -288,33 +307,35 @@ class MetaCollector:
         self.open_database_connection()
 
         for index in batch:
-            solution_dict[index] = self.get_meta_single(table_names=batch[index]["table_names"],
-                                                        columns=batch[index]["selection_attributes"],
-                                                        join_atts=batch[index]["join_attributes"],
-                                                        save=False, batchmode=True)
+            solution_dict = {index: self.get_meta(table_names=batch[9]["table_names"],
+                                                  columns=batch[9]["selection_attributes"],
+                                                  join_atts=batch[9]["join_attributes"],
+                                                  save=False, batchmode=True)}
 
-            if index == 1:
-                break
+            if save:
+                if save_file_name:
+                    self.save_meta(solution_dict, save_file_name, mode="a+")
+                else:
+                    self.save_meta(solution_dict, mode="a+")
 
         self.close_database_connection()
 
-        if save:
-            if save_file_name:
-                self.save_meta(solution_dict, save_file_name)
-            else:
-                self.save_meta(solution_dict)
+        return solution_dict
 
     @staticmethod
-    def save_meta(meta_dict: Dict, file_name: str = "meta_information"):
+    def save_meta(meta_dict: Dict, file_name: str = "meta_information", mode: str = "w"):
         """
         Method for saving the meta-information to file.
 
         :param meta_dict: the dictionary containing the meta-information to save
         :param file_name: the name (without file-type) for the save-file
+        :param mode: The mode to open the file. Some common possibilities are 'w', 'w+', 'r', 'a', 'a+'
         :return: void
         """
 
-        with open(file_name + ".yaml", "w") as file:
+        print("Saving: {} to {}".format(meta_dict, (file_name + ".yaml") if file_name else "file"))
+
+        with open(file_name + ".yaml", mode) as file:
             yaml.safe_dump(meta_dict, file)
 
 
@@ -323,5 +344,5 @@ class MetaCollector:
 
 mc = MetaCollector()
 # example which should work -> takes quite a while to be processed
-# mc.get_meta_single(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
-mc.get_meta_batch("../crawler/solution_dict.yaml")
+# mc.get_meta(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
+mc.get_meta_from_file("../crawler/solution_dict.yaml")
