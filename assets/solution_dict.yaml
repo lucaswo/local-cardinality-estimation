@@ -1,0 +1,303 @@
+0:
+  join_attributes:
+  - t.id=mi_idx.movie_id
+  - t.id=mc.movie_id
+  selection_attributes:
+  - t.production_year
+  - mc.company_type_id
+  - mi_idx.info_type_id
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_info_idx
+    - mi_idx
+  - - title
+    - t
+1:
+  join_attributes:
+  - t.id=mc.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - t.production_year
+  - mc.company_type_id
+  - mk.keyword_id
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+2:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - t.production_year
+  table_names:
+  - - movie_info
+    - mi
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+3:
+  join_attributes:
+  - t.id=mi_idx.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - mi_idx.info_type_id
+  - t.production_year
+  table_names:
+  - - movie_info_idx
+    - mi_idx
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+4:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=mc.movie_id
+  selection_attributes:
+  - mc.company_type_id
+  - t.production_year
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - title
+    - t
+5:
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - t.kind_id
+  - mk.keyword_id
+  - t.production_year
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+6:
+  join_attributes:
+  - t.id=ci.movie_id
+  selection_attributes:
+  - t.production_year
+  table_names:
+  - - cast_info
+    - ci
+  - - title
+    - t
+7:
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mc.movie_id
+  selection_attributes:
+  - ci.role_id
+  - t.production_year
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_companies
+    - mc
+  - - title
+    - t
+8:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=mi_idx.movie_id
+  - t.id=mc.movie_id
+  selection_attributes:
+  - mi.info_type_id
+  - t.production_year
+  - t.kind_id
+  - mc.company_type_id
+  - mi_idx.info_type_id
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - movie_info_idx
+    - mi_idx
+  - - title
+    - t
+9:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=mi_idx.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - mi.info_type_id
+  - t.kind_id
+  - mi_idx.info_type_id
+  - t.production_year
+  table_names:
+  - - movie_info
+    - mi
+  - - movie_info_idx
+    - mi_idx
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+10:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=mc.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - mc.company_type_id
+  - mk.keyword_id
+  - t.production_year
+  - mi.info_type_id
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+11:
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mc.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - mk.keyword_id
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_companies
+    - mc
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+12:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=ci.movie_id
+  - t.id=mi_idx.movie_id
+  selection_attributes:
+  - t.production_year
+  - mi_idx.info_type_id
+  - mi.info_type_id
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_info
+    - mi
+  - - movie_info_idx
+    - mi_idx
+  - - title
+    - t
+13:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=ci.movie_id
+  - t.id=mc.movie_id
+  selection_attributes:
+  - t.production_year
+  - ci.role_id
+  - mi.info_type_id
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - title
+    - t
+14:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=mi_idx.movie_id
+  - t.id=mk.movie_id
+  - t.id=mc.movie_id
+  selection_attributes:
+  - mi.info_type_id
+  - mi_idx.info_type_id
+  - t.production_year
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - movie_info_idx
+    - mi_idx
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+15:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=ci.movie_id
+  - t.id=mc.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - mc.company_id
+  - t.production_year
+  - mi.info_type_id
+  - mk.keyword_id
+  - ci.role_id
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+16:
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=ci.movie_id
+  - t.id=mi_idx.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - t.production_year
+  - mi_idx.info_type_id
+  - mi.info_type_id
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_info
+    - mi
+  - - movie_info_idx
+    - mi_idx
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+17:
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mi_idx.movie_id
+  - t.id=mk.movie_id
+  selection_attributes:
+  - t.kind_id
+  - mi_idx.info_type_id
+  - t.production_year
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_info_idx
+    - mi_idx
+  - - movie_keyword
+    - mk
+  - - title
+    - t
