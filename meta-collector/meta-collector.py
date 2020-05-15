@@ -149,12 +149,12 @@ class MetaCollector:
             if isinstance(table_names[0], list) or isinstance(table_names[0], tuple):
                 tables_string = ",".join(["{} {}".format(tab[0], tab[1]) for tab in table_names])
                 columns = self.eliminate_duplicates(columns)
-                columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
+                columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[2]
                                            else "{}".format(col) for col in columns])
                 attributes_string = " AND ".join(["{}".format(join) for join in join_atts])
             else:
                 tables_string = ",".join(["{} t{}".format(tab, i + 1) for i, tab in enumerate(table_names)])
-                columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
+                columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[2]
                                            else "{col}".format(col=col[0]) for col in columns_types])
                 attributes_string = " AND ".join(["t{}.{} = t{}.{}".format(1, join[0], i + 2, join[1]) for i, join in
                                                   enumerate(join_atts)])
@@ -162,7 +162,7 @@ class MetaCollector:
             sql = """CREATE TABLE tmpview AS (SELECT {} FROM {} WHERE {});""".format(columns_string, tables_string,
                                                                                      attributes_string)
         else:
-            columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[1]
+            columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[2]
                                        else "{col}".format(col=col[0]) for col in columns_types])
             sql = """CREATE TABLE tmpview AS (SELECT {} FROM {});""".format(columns_string, table_names[0])
 
@@ -223,7 +223,7 @@ class MetaCollector:
 
             cats = [x[0] for x in tmp if x[0] is not None]
 
-            if col[1] != "integer":
+            if col[2] != "integer":
                 le = LabelEncoder()
                 cats = le.fit_transform(sorted(cats))
 
