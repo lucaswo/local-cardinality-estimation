@@ -1,0 +1,1 @@
+from meta_collector.meta_collector import MetaCollector

@@ -1,0 +1,46 @@
+loaders:
+  - type: python
+processors:
+  - type: filter
+  - type: smart
+  - type: crossref
+renderer:
+  type: mkdocs
+  pages:
+    - title: Home
+      name: index
+      source: README.md
+    - title: Crawler
+      children:
+        - title: Crawler Class
+          contents:
+            - crawler.crawler.*
+        - title: Crawler Readme
+          contents:
+            - crawler.README
+    - title: Estimator
+      children:
+        - title: Estimator Class
+          contents:
+            - estimator.estimator.*
+        - title: Estimator Readme
+          contents:
+            - estimator.README
+    - title: Meta-Collector
+      children:
+        - title: Meta-Collector Class
+          contents:
+            - meta_collector.meta_collector.*
+        - title: Meta-Collector Readme
+          contents:
+            - meta_collector.README
+    - title: Vectorizer
+      children:
+        - title: Vectorizer Class
+          contents:
+            - vectorizer.vectorizer.*
+        - title: Vectorizer Readme
+          contents:
+            - vectorizer.README
+  mkdocs_config:
+    theme: gitbook

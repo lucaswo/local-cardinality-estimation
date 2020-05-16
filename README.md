@@ -13,4 +13,21 @@ KP SS2020
 - The submodule 'postrgres-evaluator' takes the sql-queries and executes them on the postgres-database to get the true cardinality
 
 
-![Module overview](module_overview.png)
+![Module overview](./module_overview.png)
+
+For building the Documentation you need 'pydoc-markdown' and 'mkdocs'.
+
+
+```shell script
+    pip install pydoc-markdown mkdocs
+```
+
+In project directory execute:
+
+```shell script
+    pydoc-markdown
+    cd build/docs/
+    mkdocs serve
+```
+
+Known Issue: Atm. the picture ist not displayed in built documentation. 
