@@ -1,0 +1,7 @@
+# Postgres
+db_name: "imdb"
+user: "postgres"
+password: "asdf"
+host: "localhost"
+port: "5432"
+
