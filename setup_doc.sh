@@ -22,7 +22,7 @@ fi
 
 pydoc-markdown
 
-cp module_overview.png build/docs/docs/
+cp -avr diagrams/ build/docs/docs/
 
 cd build/docs/
 
