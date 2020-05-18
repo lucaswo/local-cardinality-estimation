@@ -24,20 +24,20 @@ renderer:
             - meta_collector.meta_collector.*
         - title: Meta-Collector Readme
           source: meta_collector/README.md
-#    - title: SQL-Generator
-#      children:
-#        - title: SQL-Generator Class
-#          contents:
-#              - sql_generator.sql_generator.*
-#        - title: SQL-Generator Readme
-#          source: sql_generator/README.md
-#    - title: Postgres-Evaluator
-#      children:
-#        - title: Postgres-Evaluator Class
-#          contents:
-#            - postgres_evaluator.postgres_evaluator.*
-#        - title: Postgres-Evaluator Readme
-#          source: postgres_evaluator/README.md
+    - title: SQL-Generator
+      children:
+        - title: SQL-Generator Class
+          contents:
+              - sql_generator.sql_generator.*
+        - title: SQL-Generator Readme
+          source: sql_generator/README.md
+    - title: Postgres-Evaluator
+      children:
+        - title: Postgres-Evaluator Class
+          contents:
+            - postgres_evaluator.postgres_evaluator.*
+        - title: Postgres-Evaluator Readme
+          source: postgres_evaluator/README.md
     - title: Vectorizer
       children:
         - title: Vectorizer Class
@@ -53,4 +53,6 @@ renderer:
         - title: Estimator Readme
           source: estimator/README.md
   mkdocs_config:
+    site_name: Local Cardinality Estimation
+    repo_url: https://gitlab.hrz.tu-chemnitz.de/ddsg/ml4sys/local-cardinality-estimation
     theme: gitbook
