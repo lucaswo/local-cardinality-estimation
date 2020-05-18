@@ -15,19 +15,4 @@ KP SS2020
 
 ![Module overview](./module_overview.png)
 
-For building the Documentation you need 'pydoc-markdown' and 'mkdocs'.
-
-
-```shell script
-    pip install pydoc-markdown mkdocs
-```
-
-In project directory execute:
-
-```shell script
-    pydoc-markdown
-    cd build/docs/
-    mkdocs serve
-```
-
-Known Issue: Atm. the picture ist not displayed in built documentation. 
+For building the Documentation you need to execute the `setup_doc.sh`. This script installs the prerequisites if not already installed, builds the documentation and starts the documentation-server.
