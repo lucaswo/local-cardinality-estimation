@@ -4,6 +4,7 @@ from typing import List, Tuple, Dict
 import time
 import os.path
 import yaml
+import csv
 
 # Proposal: Do not call the vectorizer for each single query string, but collect them and then execute them parallelized
 
@@ -28,14 +29,26 @@ class Vectorizer:
         self.cardinality_estimation_postgres = None
         self.cardinality_truth = None
         self.vector = None
+        self.yaml_path = yaml_path
 
-        self.max_cardinaltiy = 10 # TODO: Is only placeholder
-        # TODO: read meta and get all max_card (for each query?/table?)
-        # with open(yaml_path, 'r', encoding='utf8') as f:
-        #     self.meta = yaml.safe_load(f)
-        # if(self.meta):
-        #     self.meta["max_card"]
+    def get_max_cardinality(self, query_csv_path):
+        """Stores and returns the max_cardinality of the current query"""
 
+        max_card_yaml_key = -1
+        with open(query_csv_path, 'r', encoding='utf8') as f:
+            for row in csv.DictReader(f):
+                if row["query"] == self.query:
+                    max_card_yaml_key = row["key"]
+                    break
+        if max_card_yaml_key != -1:
+            with open(self.yaml_path, 'r', encoding='utf8') as f:
+                self.meta = yaml.safe_load(f)
+
+            max_card = self.meta[max_card_yaml_key]['max_card']
+            self.max_cardinality = max_card
+            return max_card
+        else:
+            raise ValueError("Query not found within csv file!")
     
 
 
@@ -90,7 +103,7 @@ class Vectorizer:
         return (value - min_value)/(max_value - min_value)
 
 
-    def vectorize(self, cardinality_estimation_postgres, cardinality_truth, max_card) -> np.ndarray:
+    def vectorize(self, cardinality_estimation_postgres, cardinality_truth, max_card=None) -> np.ndarray:
         """Vectorizes the query given. Returns the a triple containing (vector, estimated cardinality, true cardinality). If cardinalities not set beforehand None or old value is returned."""
 
         for expression in self.expressions:
@@ -102,6 +115,8 @@ class Vectorizer:
             self.vector[idx*self.n_max_expressions:end_idx] = self.operators[operator]
             self.vector[end_idx] = normalized_value
 
+        if max_card is None:
+            max_card = self.max_cardinality
         self.cardinality_truth = self.__min_max_normalize(cardinality_truth, max_card)
         self.cardinality_estimation_postgres = cardinality_estimation_postgres
         return self.vector, self.cardinality_estimation_postgres, self.cardinality_truth
@@ -191,7 +206,7 @@ def vectorizer_tests():
     # vectorization test
     vectorizer = Vectorizer("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/meta_information.yaml")
     vectorizer.set_query(sql_query, min_max_step, encoders)
-    vector_vectorizer, card_est, card_norm = vectorizer.vectorize(postgres_cardinality_estimate, cardinality, max_card)
+    vector_vectorizer, card_est, card_norm = vectorizer.vectorize(postgres_cardinality_estimate, cardinality, None)
     assert np.allclose(vector_vectorizer, vector_truth),  f"{vector_vectorizer} not close \n{vector_truth}"
     assert card_est == postgres_cardinality_estimate, f"{card_est} is not queal {postgres_cardinality_estimate}"
     assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
