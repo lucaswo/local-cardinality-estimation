@@ -52,38 +52,31 @@ class SQLGenarator:
             for q in queries:
                 f.write(q[1]+'\n')
 
-    def write_csv(self,key:int,value:Dict,compairison:List[Dict]):
-        '''
-        Function for writing the generated query into a csv file
-        :param value: Dict Entry from Meta File
-        :param key: integer for query_setID
-        :param compairison: Attribute values for query
-        :return:
-        '''
-        with open('queries.csv',mode ='a') as f:
-            writer = csv.writer(f,delimiter=';')
-            tables = ','.join('{} {}'.format(v[0],v[1])for v in value['table_names'])
-            joins = ','.join(value['join_attributes'])
-            att1 = '{}.{}'.format(compairison[0]['col'][1],compairison[0]['col'][0])+','+compairison[0]['op']+','+str(compairison[0]['val'])
-            try:
-                att2= '{}.{}'.format(compairison[1]['col'][1],compairison[1]['col'][0])+','+compairison[1]['op']+','+str(compairison[1]['val'])
-            except:
-                att2=''
-            try:
-                att3 = '{}.{}'.format(compairison[2]['col'][1],compairison[2]['col'][0])+','+compairison[2]['op']+','+str(compairison[2]['val'])
-            except:
-                 att3=''
-            writer.writerow([key,tables,joins,att1,att2,att3])
 
-    def random_operator(self):
+    def random_operator_value(self,range:List,val_type:str,encoding:dict = None) -> Tuple:
         '''
-        Function for random operator creation from a list of allowed operators
-        :return: Operator from possible solutions: ['<','>','=','<=','>=']
+        Function for random operator and value creation from a list of allowed operators and a range of values
+
+
+        :param range: Min_max Value range and stepsize of a given column from meta_information
+        :param type: Type of column, can be either integer or enumeration. when enumeration, then an encoding dict has to be given
+        :return: Tuple consisting of operator and value
         '''
-        return random.choice(['<','>','=','<=','>=','!='])
+        op = random.choice(['<','>','=','<=','>=','!='])
+
+        # create value according to datatype of column -> integer or string (then encoding dict given)
+        if val_type == 'integer':
+            val =  random.randrange(start=range[0],stop=range[1]+1,step=range[2])
+        else:
+            val = random.choice(encoding.values())
+
+        # avoid values that zeroize the cardinality -> val<min (if val =min) or val>max (if val=max)
+        if (val == range[0] and op== '<') or (val == range[1] and op== '>'):
+            self.random_operator_value(self,range,val_type,encoding)
+
+        return (op,val)
 
     def random_value(self,range:List,type:str,encoding:dict = None) -> int:
-        # TODO What to Do with other dtypes than Integer or double, float etc? Does'nt exist in joblight queries
         '''
         Function for finding a random value in the given min_max range.
 
@@ -96,7 +89,7 @@ class SQLGenarator:
             return random.randrange(start=range[0],stop=range[1]+1,step=range[2])
 
         else:
-            return random.choice(encoding.keys())
+            return random.choice(encoding.values())
 
 
     def generate_queries(self,number:int=10,save_readable:Tuple[bool,str]=[True,'queries.sql']):
@@ -109,32 +102,37 @@ class SQLGenarator:
         :param number: Number of generated queries per meta-entry
         :return: list with queries as String
         '''
+
         queries = []
+        header = ['querySetID','query','encodings','max_card','min_max_step']
+
         with open('queries.csv','w') as file:
-            writer = csv.writer(file,delimiter= ';')
-            writer.writerow(['querySetID','tables','join_attributes','attr_1,attr_2','attr_3'])
-        for key,value in self.q_set.items():
+            writer = csv.DictWriter(file,delimiter= ';',fieldnames=header)
+            writer.writeheader()
 
-            for q in range(number):
-                #sort columns by name
-                columns = sorted(value['columns'],key = lambda index : index[0])
-                comparison = []
-                for col in columns:
-                    # if val = max  and op = >, the cardinality will be zero, same with min and < --> pretend such cases?
-                    op = self.random_operator()
-                    val = self.random_value(value['min_max_step'][col[0]],type=col[2])
-                    comparison.append({'col':col, 'op':op,'val':val})
+            for key,value in self.q_set.items():
+                for q in range(number):
+                    #sort columns by name
+                    columns = sorted(value['columns'],key = lambda index : index[0])
+                    comparison = []
+                    
+                    for col in columns:
+                        # if val = max  and op = >, the cardinality will be zero, same with min and < --> pretend such cases?
+                        op,val = self.random_operator_value(value['min_max_step'][col[0]],type=col[2])
+                        comparison.append({'col':col, 'op':op,'val':val})
+
+                    #not formatted yet
+                    # TODO: find duplicates and replace them
+                    sql = 'SELECT COUNT(*) FROM {} WHERE {} AND {}'.format(','.join('{} {}'.format(v[0],v[1])for v in value['table_names']),
+                                                                       ' AND '.join(value['join_attributes']),
+                                                                       ' AND '.join('{}.{}{}{}'.format(c['col'][1],c['col'][0],c['op'],c['val']) for c in comparison))
 
 
-                #not formatted yet
-                # TODO: find duplicates and replace them
-                sql = 'SELECT COUNT(*) FROM {} WHERE {} AND {};'.format(','.join('{} {}'.format(v[0],v[1])for v in value['table_names']),
-                                                                   ' AND '.join(value['join_attributes']),
-                                                                   ' AND '.join('{}.{}{}{}'.format(c['col'][1],c['col'][0],c['op'],c['val']) for c in comparison))
-                self.write_csv(key,value,comparison)
+                    writer.writerow({'querySetID':key,'query':sql,'encodings':value['encodings'],'max_card':value['max_card'][0],'min_max_step':value['min_max_step']})
 
-                print(key,sql)
-                queries.append((key,sql))
+                    print(key,sql)
+                    queries.append((key,sql))
+
         if save_readable[0]:
             self.write_sql(queries,save_readable[1])
 
