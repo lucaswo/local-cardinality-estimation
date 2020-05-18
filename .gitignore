@@ -155,3 +155,4 @@ gen
 .idea/modules.xml
 .idea/vcs.xml
 vectorizer/*.yaml
+vectorizer/*.csv
