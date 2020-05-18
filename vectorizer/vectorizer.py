@@ -1,12 +1,11 @@
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
-from typing import List, Tuple, Dict
 import time
 import os.path
 import csv
 from ast import literal_eval
 
-# Proposal: Do not call the vectorizer for each single query string, but collect them and then execute them parallelized
+from typing import List, Tuple, Dict
 
 class Vectorizer:
     """Constructs a vector consisting of operator code and normalized value for each predicate in the sql query set with set_query method."""
@@ -45,8 +44,8 @@ class Vectorizer:
     def add_queries_with_cardinalities(self, queries_with_cardinalities_path):
         """
         Reads CSV file with fomrat (querySetID;query;encodings;max_card;min_max_step) whereas min_max_step is a dictionary of the format 
-        {'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]} and encodings is empty or an empty dictionary if only integer values are processed.
-        Read queries are added to the list of vectorisation tasks. Attention: queries must have sorted predicates 
+        {'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]} and encodings is an empty dictionary if only integer values are processed.
+        Read queries are added to the list of vectorisation tasks. Attention: queries must have sorted predicates.
         """
 
         with open(queries_with_cardinalities_path) as f:
@@ -70,7 +69,14 @@ class Vectorizer:
                     ))
 
 
-    def vectorize(self):
+    def vectorize(self) -> List[np.array]:
+        """
+        Vectorizes all vectorization tasks added.
+        
+        :return: List of np.array vectors
+        """
+
+        
         while len(self.vectorization_tasks) > 0:
             _, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
 
@@ -95,7 +101,13 @@ class Vectorizer:
         return self.vectorization_results
 
     def __parse_expression(self, expression: str) -> Tuple[str, str, int]:
-        """Parses the given expression. Returns parse result: predicate, operator and value"""
+        """
+        Parses the given expression. Returns parse result: predicate, operator and value.
+
+        :param expression: an exptression of a WHERE clause (are usually seperated by AND/ OR) e.g. 'kind_id != 8'
+        :return: A triple with predicate, operator and value
+
+        """
 
         expression = expression.strip().strip(';')
         predicate, operator, value = expression.split(" ")
@@ -103,8 +115,16 @@ class Vectorizer:
 
 
     def __normalize(self, predicate: str, min_max_steps: Dict[str, Tuple[int, int, int]], encodings: Dict[int, str], value: int) -> float:
-        """Normalizes the value according to min-max statistics of the given predicate.
-        Normalization will result in value of range (0,1]. Returns normalized value."""
+        """
+        Normalizes the value according to min-max statistics of the given predicate. If an encoding is avaiable for the predicate it is used.
+        Normalization will result in value of range (0,1].
+        
+        :param predicate: attribute of the value
+        :param min_max_steps: dictionary of all min, max, step values for each predicate
+        :param encodings: dictionary, which maps predicates to encoders
+        :param value: the value to be normailzed
+        :return: the normalized value
+        """
 
         min_val, max_val, step = min_max_steps[predicate]
         if predicate in encodings.keys():
@@ -115,40 +135,39 @@ class Vectorizer:
     
 
     def __min_max_normalize(self, value, max_cardinality, min_value = 0):
-        """Executes a min max normalisation"""
+        """
+        Executes a min max normalization
+        
+        :param value: the value to be normailzed
+        :param max_cardinality: maximal cardinality of the query set. Its logarithm is the max value for normalization
+        :param min_value: minimal value as lower limit. Default is 0
+        :return: the normalized value
+        """
 
         max_value = np.log(max_cardinality)
         value = np.log(value)
         return (value - min_value)/(max_value - min_value)
 
-
-    # def vectorize(self, cardinality_estimation_postgres, cardinality_truth, max_card=None) -> np.ndarray:
-    #     """Vectorizes the query given. Returns the a triple containing (vector, estimated cardinality, true cardinality). If cardinalities not set beforehand None or old value is returned."""
-
-    #     for expression in self.expressions:
-    #         predicate, operator, value = self.__parse_expression(expression)
-    #         normalized_value = self.__normalize(predicate, value)
-
-    #         idx = self.predicates.index(predicate)
-    #         end_idx = idx * self.n_max_expressions + self.operator_code_length
-    #         self.vector[idx*self.n_max_expressions:end_idx] = self.operators[operator]
-    #         self.vector[end_idx] = normalized_value
-
-    #     if max_card is None:
-    #         max_card = self.max_cardinality
-    #     self.cardinality_truth = self.__min_max_normalize(cardinality_truth, max_card)
-    #     self.cardinality_estimation_postgres = cardinality_estimation_postgres
-    #     return self.vector, self.cardinality_estimation_postgres, self.cardinality_truth
-
     def save(self, path: str):
-        """Stores the SQL query and corresponding vector at given path"""
+        """
+        Stores the SQL query and corresponding vector at given path as NPY and TXT file. Prepends a timestamp
+
+        :param path: path to a directory for saving
+        """
 
         timestr = time.strftime("%Y%m%d_%H%M%S")
         np.save( os.path.join(path, f"{timestr}_vector.npy"), np.array(self.vectorization_results) )
         np.savetxt( os.path.join(path, f"{timestr}_vector.txt"), np.array(self.vectorization_results) )
 
 def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]):
-    """Copy-pasted method of the original implementation for testing purposes"""
+    """
+    Copy-pasted method of the original implementation for testing purposes
+    
+    :param query: the query to vectorize
+    :param min_max: dictionary of all min, max, step values for each predicate
+    :param encoders: dictionary, which maps predicates to encoders
+    :return: the normalized vector without cardinalities
+    """
 
     query = query.replace("NULL", "-1").replace("IS NOT", "!=").replace(";", "")
     total_columns = len(min_max)
@@ -217,7 +236,7 @@ def vectorizer_tests():
     vector_original = vectorize_query_original(sql_query, min_max_step, encoders)
     assert np.allclose(vector_original, vector_truth)
 
-    # vectorization test
+    # small vectorization test
     vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test.csv")
     for vec in vectorizer.vectorize():
@@ -225,8 +244,6 @@ def vectorizer_tests():
         assert np.allclose(vector_vectorizer, vector_truth),  f"{vector_vectorizer} not close \n{vector_truth}"
         assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
     vectorizer.save("/mnt/data/programming/tmp/")
-
-    # TODO: batch test
 
 # meta data:
 # for each column:
