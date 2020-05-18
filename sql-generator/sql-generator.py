@@ -1,8 +1,8 @@
 from typing import Tuple, Dict, List
 import yaml
 import random
-
-
+import csv
+import datetime
 class SQLGenarator:
     '''
     Class for generating SQL queries. Uses Meta Information from MetaCollector Step before.
@@ -52,6 +52,28 @@ class SQLGenarator:
             for q in queries:
                 f.write(q[1]+'\n')
 
+    def write_csv(self,key:int,value:Dict,compairison:List[Dict]):
+        '''
+        Function for writing the generated query into a csv file
+        :param value: Dict Entry from Meta File
+        :param key: integer for query_setID
+        :param compairison: Attribute values for query
+        :return:
+        '''
+        with open('queries.csv',mode ='a') as f:
+            writer = csv.writer(f,delimiter=';')
+            tables = ','.join('{} {}'.format(v[0],v[1])for v in value['table_names'])
+            joins = ','.join(value['join_attributes'])
+            att1 = '{}.{}'.format(compairison[0]['col'][1],compairison[0]['col'][0])+','+compairison[0]['op']+','+str(compairison[0]['val'])
+            try:
+                att2= '{}.{}'.format(compairison[1]['col'][1],compairison[1]['col'][0])+','+compairison[1]['op']+','+str(compairison[1]['val'])
+            except:
+                att2=''
+            try:
+                att3 = '{}.{}'.format(compairison[2]['col'][1],compairison[2]['col'][0])+','+compairison[2]['op']+','+str(compairison[2]['val'])
+            except:
+                 att3=''
+            writer.writerow([key,tables,joins,att1,att2,att3])
 
     def random_operator(self):
         '''
@@ -88,6 +110,9 @@ class SQLGenarator:
         :return: list with queries as String
         '''
         queries = []
+        with open('queries.csv','w') as file:
+            writer = csv.writer(file,delimiter= ';')
+            writer.writerow(['querySetID','tables','join_attributes','attr_1,attr_2','attr_3'])
         for key,value in self.q_set.items():
 
             for q in range(number):
@@ -100,18 +125,20 @@ class SQLGenarator:
                     val = self.random_value(value['min_max_step'][col[0]],type=col[2])
                     comparison.append({'col':col, 'op':op,'val':val})
 
-                    #TODO: List, needed for the joblight csv format
-                    #TODO: get belonging table of the
-                    # column from meta data(does not exist now) and change col[0] to '.'join([col[2],col[0]])
-                #not formatted yet
 
+                #not formatted yet
+                # TODO: find duplicates and replace them
                 sql = 'SELECT COUNT(*) FROM {} WHERE {} AND {};'.format(','.join('{} {}'.format(v[0],v[1])for v in value['table_names']),
                                                                    ' AND '.join(value['join_attributes']),
                                                                    ' AND '.join('{}.{}{}{}'.format(c['col'][1],c['col'][0],c['op'],c['val']) for c in comparison))
+                self.write_csv(key,value,comparison)
+
                 print(key,sql)
                 queries.append((key,sql))
+        if save_readable[0]:
+            self.write_sql(queries,save_readable[1])
 
-        self.write_sql(queries,save_readable[1])
+
         return queries
 
 
