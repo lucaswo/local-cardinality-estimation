@@ -4,6 +4,7 @@ import time
 import os.path
 import csv
 from ast import literal_eval
+from tqdm import tqdm
 
 from typing import List, Tuple, Dict
 
@@ -27,25 +28,13 @@ class Vectorizer:
         self.vectorization_tasks = [] # may become a SimpleQueue in case of multithreading
         self.vectorization_results = []
 
-    def set_query(self, query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]):
-        """Reads a new query for another vectorisation task. Avoids Vectorizer object switch."""
-
-        self.query = query
-        self.expressions = query.split("WHERE", maxsplit=1)[1].split("AND")
-        assert self.n_max_expressions > len(self.expressions), f"Too many expressions concatinated by 'AND' in query!"
-
-        self.min_max_step = min_max
-        self.predicates = list(self.min_max_step.keys())
-        self.encoders = encoders
-        self.n_total_columns = len(min_max)
-        self.vector = np.zeros(self.n_total_columns * self.n_max_expressions)
-
-
     def add_queries_with_cardinalities(self, queries_with_cardinalities_path):
         """
         Reads CSV file with fomrat (querySetID;query;encodings;max_card;min_max_step) whereas min_max_step is a dictionary of the format 
         {'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]} and encodings is an empty dictionary if only integer values are processed.
         Read queries are added to the list of vectorisation tasks. Attention: queries must have sorted predicates.
+
+        :param queries_with_cardinalities_path: path to a CSV file containing all queries and their estimated and true cardinalities 
         """
 
         with open(queries_with_cardinalities_path) as f:
@@ -73,10 +62,9 @@ class Vectorizer:
         """
         Vectorizes all vectorization tasks added.
         
-        :return: List of np.array vectors
+        :return: List of np.array vectors whereas each row contains the vectorized query and appended estimated and true cardinality (in this order) 
         """
 
-        
         while len(self.vectorization_tasks) > 0:
             _, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
 
@@ -92,7 +80,6 @@ class Vectorizer:
                 vector[idx*self.n_max_expressions:end_idx] = self.operators[operator]
                 vector[end_idx] = value_normalzed
                 
-            
             # normalize cardinalities
             vector[-2] = self.__min_max_normalize(estimated_cardinality, max_card)
             vector[-1] = self.__min_max_normalize(true_cardinality, max_card)
@@ -105,7 +92,7 @@ class Vectorizer:
         Parses the given expression. Returns parse result: predicate, operator and value.
 
         :param expression: an exptression of a WHERE clause (are usually seperated by AND/ OR) e.g. 'kind_id != 8'
-        :return: A triple with predicate, operator and value
+        :return: a triple with predicate, operator and value
 
         """
 
@@ -134,7 +121,7 @@ class Vectorizer:
         return (value - min_val + step) / (max_val - min_val + step)
     
 
-    def __min_max_normalize(self, value, max_cardinality, min_value = 0):
+    def __min_max_normalize(self, value, max_cardinality, min_value = 0) -> float:
         """
         Executes a min max normalization
         
@@ -146,7 +133,7 @@ class Vectorizer:
 
         max_value = np.log(max_cardinality)
         value = np.log(value)
-        return (value - min_value)/(max_value - min_value)
+        return float(value - min_value)/(max_value - min_value)
 
     def save(self, path: str):
         """
@@ -157,9 +144,9 @@ class Vectorizer:
 
         timestr = time.strftime("%Y%m%d_%H%M%S")
         np.save( os.path.join(path, f"{timestr}_vector.npy"), np.array(self.vectorization_results) )
-        np.savetxt( os.path.join(path, f"{timestr}_vector.txt"), np.array(self.vectorization_results) )
+        np.savetxt( os.path.join(path, f"{timestr}_vector.csv"), np.array(self.vectorization_results), delimiter=',', fmt="%.18g")
 
-def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]):
+def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]) -> np.array:
     """
     Copy-pasted method of the original implementation for testing purposes
     
@@ -199,30 +186,6 @@ def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]
 def vectorizer_tests():
     """Test method to compare the original implementation with jupyter notebook output (truth) or with the Vectorizer implementation. Succeeds if no assertion throws an error."""
 
-    # OUTPUT
-    # Setting up view...
-
-    # cols, max_card
-    # [('kind_id', 'integer'), ('person_id', 'integer'), ('role_id', 'integer')] (62143897,)
-
-    # mm, encs
-    # {'kind_id': (1, 8, 1), 'person_id': (1, 6226526, 1), 'role_id': (1, 11, 1)} {}
-    # Generating test queries...
-
-    # SELECT COALESCE(SUM(count), 0) FROM tmpview_cube WHERE kind_id != 8;
-
-    # vector
-    # [1. 1. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0.]
-
-    # SQL_queries_t, data_test, y_test, postgres_est
-    # ['SELECT * FROM title t1,cast_info t2 WHERE t1.id=t2.movie_id AND kind_id != 8;'] [[1. 1. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0.]] [62143871] [63475836]
-
-    # N, y
-    # [17.94496317] [0.99999998] # was sadly rounded... but is ok as approximation
-
-
-
-
     sql_query = "SELECT COALESCE(SUM(count), 0) FROM tmpview_cube WHERE kind_id != 8;"
     min_max_step = {'kind_id': (1, 8, 1), 'person_id': (1, 6226526, 1), 'role_id': (1, 11, 1)}
     encoders = {}
@@ -243,13 +206,14 @@ def vectorizer_tests():
         vector_vectorizer, card_est, card_norm = vec[:-2], vec[-2], vec[-1]
         assert np.allclose(vector_vectorizer, vector_truth),  f"{vector_vectorizer} not close \n{vector_truth}"
         assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
-    vectorizer.save("/mnt/data/programming/tmp/")
 
-# meta data:
-# for each column:
-    # col[X] = (column_name, data_type)
-    # min_max holds (min_value, max_value, 1) for each columns value range
-    # encoders is dictonary. Only cols not of type integer have an encoder (LabelEncoder) mapped
+    # bigger vectorization test
+    vectorizer = Vectorizer()
+    vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test_bigger.csv")
+    vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test.csv")
+    for vec in vectorizer.vectorize():
+        vector_vectorizer, cardinality_estimation, cardinality_true = vec[:-2], vec[-2], vec[-1]
+    vectorizer.save("/mnt/data/programming/tmp/")
 
 if __name__ == "__main__":
     vectorizer_tests()
