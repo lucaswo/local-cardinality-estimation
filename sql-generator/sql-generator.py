@@ -15,7 +15,7 @@ class SQLGenarator:
 
         It's also possible to pass an own meta.yaml file to skip the metaCollector Step.
 
-        :param config: Dictionary which contains columns with their datatypes, tables, join_attributes, encodings,maximum cardinality
+        :param config: Config file which contains columns with their datatypes, tables, join_attributes, encodings,maximum cardinality
         min and max values of the columns with the step size.
         If None: meta-information.yaml generated from MetaCollector is used
         """
@@ -28,6 +28,7 @@ class SQLGenarator:
         else:
             with open(config,'r') as file:
                 self.q_set = yaml.safe_load(file)
+                print(self.q_set, '\n', type(self.q_set))
 
         for key,gen_params in self.q_set.items():
 
@@ -48,7 +49,7 @@ class SQLGenarator:
 
 
     def write_sql(self, queries:List[Tuple[int,str]], file:str):
-        with open(file,'w') as f:
+        with open(file,'w+') as f:
             for q in queries:
                 f.write(q[1]+'\n')
 
@@ -62,37 +63,23 @@ class SQLGenarator:
         :param type: Type of column, can be either integer or enumeration. when enumeration, then an encoding dict has to be given
         :return: Tuple consisting of operator and value
         '''
-        op = random.choice(['<','>','=','<=','>=','!='])
-
-        # create value according to datatype of column -> integer or string (then encoding dict given)
-        if val_type == 'integer':
-            val =  random.randrange(start=range[0],stop=range[1]+1,step=range[2])
-        else:
-            val = random.choice(encoding.values())
 
         # avoid values that zeroize the cardinality -> val<min (if val =min) or val>max (if val=max)
-        if (val == range[0] and op== '<') or (val == range[1] and op== '>'):
-            self.random_operator_value(self,range,val_type,encoding)
+        val = None
+
+        while (val == range[0] and op== '<') or (val == range[1] and op== '>') or not val:
+            op = random.choice(['<','>','=','<=','>=','!='])
+
+            # create value according to datatype of column -> integer or string (then encoding dict given)
+            if val_type == 'integer':
+                val = random.randrange(start=range[0], stop=range[1] + 1, step=range[2])
+            else:
+                val = random.choice(encoding.values())
 
         return (op,val)
 
-    def random_value(self,range:List,type:str,encoding:dict = None) -> int:
-        '''
-        Function for finding a random value in the given min_max range.
 
-        :param range: Min_max Value range and stepsize of a given column
-        :param type: Type of column, can be either integer or enumeration. when enumeration, then an encoding dict has to be given
-        :return: random legit value from range given with min, max and step size
-
-        '''
-        if type == 'integer':
-            return random.randrange(start=range[0],stop=range[1]+1,step=range[2])
-
-        else:
-            return random.choice(encoding.values())
-
-
-    def generate_queries(self,number:int=10,save_readable:Tuple[bool,str]=[True,'queries.sql']):
+    def generate_queries(self,number:int=10,save_readable:Tuple[bool,str]=[True,'../assets/queries.sql']):
         '''
         Generates given number of SQL Queries with given meta-information.
         Function, which models the hole process of query generation
@@ -102,23 +89,23 @@ class SQLGenarator:
         :param number: Number of generated queries per meta-entry
         :return: list with queries as String
         '''
-
-        queries = []
+        all_queries = []
         header = ['querySetID','query','encodings','max_card','min_max_step']
 
-        with open('queries.csv','w') as file:
+        with open('../assets/queries.csv','w') as file:
             writer = csv.DictWriter(file,delimiter= ';',fieldnames=header)
             writer.writeheader()
 
             for key,value in self.q_set.items():
-                for q in range(number):
+                # generate queries until there are 'number' of unique queries
+                queries = []
+                while len(queries)< number:
                     #sort columns by name
                     columns = sorted(value['columns'],key = lambda index : index[0])
                     comparison = []
                     
                     for col in columns:
-                        # if val = max  and op = >, the cardinality will be zero, same with min and < --> pretend such cases?
-                        op,val = self.random_operator_value(value['min_max_step'][col[0]],type=col[2])
+                        op,val = self.random_operator_value(value['min_max_step'][col[0]],val_type=col[2])
                         comparison.append({'col':col, 'op':op,'val':val})
 
                     #not formatted yet
@@ -127,19 +114,23 @@ class SQLGenarator:
                                                                        ' AND '.join(value['join_attributes']),
                                                                        ' AND '.join('{}.{}{}{}'.format(c['col'][1],c['col'][0],c['op'],c['val']) for c in comparison))
 
-
-                    writer.writerow({'querySetID':key,'query':sql,'encodings':value['encodings'],'max_card':value['max_card'][0],'min_max_step':value['min_max_step']})
+                    if sql not in queries:
+                        writer.writerow({'querySetID':key,'query':sql,'encodings':value['encodings'],'max_card':value['max_card'][0],'min_max_step':value['min_max_step']})
 
                     print(key,sql)
                     queries.append((key,sql))
+                    queries=list(set(queries))
 
+                all_queries+=queries
+
+        #save as .sql in a readable format with choosen name
         if save_readable[0]:
-            self.write_sql(queries,save_readable[1])
+            self.write_sql(all_queries,save_readable[1])
 
 
         return queries
 
 
-gen = SQLGenarator()
+gen = SQLGenarator(config='../assets/meta_information.yaml')
 gen.generate_queries()
 
