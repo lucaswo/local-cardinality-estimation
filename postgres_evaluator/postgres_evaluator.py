@@ -25,7 +25,7 @@ class PostgresEvaluator:
 
     debug: bool = None
 
-    def __init__(self, config: dict = None, debug: bool = True):
+    def __init__(self, config: dict = None, debug: bool = True, sql_file: str = 'queries.sql'):
         """
         Initializer for the PostgresEvaluator
 
@@ -37,6 +37,7 @@ class PostgresEvaluator:
             and port (default to host: localhost, port: 5432 if not given)
             if not given: the config file 'config.yaml' is used for these settings
         :param debug: boolean whether to print additional information while processing
+        :param sql_file: name of the file used for the sql query import
         """
 
         if config is None:
@@ -58,7 +59,7 @@ class PostgresEvaluator:
 
         self.debug = debug
 
-        with open('queries.sql', 'r') as f:
+        with open(sql_file, 'r') as f:
             sql_file = f.read()
         self.sql_queries = list(filter(None, sql_file.split('\n')))
 
