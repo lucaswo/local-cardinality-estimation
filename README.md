@@ -13,4 +13,6 @@ KP SS2020
 - The submodule 'postrgres-evaluator' takes the sql-queries and executes them on the postgres-database to get the true cardinality
 
 
-![Module overview](module_overview.png)
+![Module overview](diagrams/module_overview.png)
+
+For building the Documentation you need to execute the `setup_doc.sh`. This script installs the prerequisites if not already installed, builds the documentation and starts the documentation-server.
