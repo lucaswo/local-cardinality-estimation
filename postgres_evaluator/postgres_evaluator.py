@@ -3,6 +3,7 @@ from typing import List, Tuple, Dict
 import psycopg2 as postgres
 import yaml
 
+
 # TODO: Dokumentation für SQL aus CSV/SQL-file laden ergänzen
 # TODO: gegen Fehler absichern, entsprechende Meldungen machen
 # TODO: hardgecodete Filenamen ersetzen, CSV-Varianten ergänzen
@@ -58,14 +59,14 @@ class PostgresEvaluator:
         self.debug = debug
 
         with open('queries.sql', 'r') as f:
-            sqlFile = f.read()
-        self.sqlQueries = list(filter(None,sqlFile.split('\n')))
+            sql_file = f.read()
+        self.sql_queries = list(filter(None, sql_file.split('\n')))
 
-        self.explainQueries = []
-        for query in self.sqlQueries:
+        self.explain_queries = []
+        for query in self.sql_queries:
             tmp = query.split('COUNT(*)')
-            explainQuery = "EXPLAIN " + tmp[0] + "*" + tmp[1]
-            self.explainQueries.append(explainQuery)
+            explain_query = "EXPLAIN " + tmp[0] + "*" + tmp[1]
+            self.explain_queries.append(explain_query)
 
     def open_database_connection(self):
         """
@@ -101,50 +102,50 @@ class PostgresEvaluator:
 
     def get_true_cardinalities(self):
         cardinalities = []
-        for query in self.sqlQueries:
+        for query in self.sql_queries:
             if self.debug:
                 print("Executing: {}".format(query))
             self.cur.execute(query)
             output = self.cur.fetchone()
-            trueCardi = output[0]
+            true_cardi = output[0]
             if self.debug:
-                print("true cardinality ('count(*)'): {}".format(trueCardi))
-            cardinalities.append(trueCardi)
+                print("true cardinality ('count(*)'): {}".format(true_cardi))
+            cardinalities.append(true_cardi)
         return cardinalities
 
     def get_estimated_cardinalities(self):
         cardinalities = []
-        for query in self.explainQueries:
+        for query in self.explain_queries:
             if self.debug:
                 print("Executing: {}".format(query))
             self.cur.execute(query)
 
             output = self.cur.fetchone()
-            startIndex = output[0].index("rows=")
-            endIndex = output[0].index("width=")
-            estiCardi = output[0][startIndex+5:endIndex-1]
+            start_index = output[0].index("rows=")
+            end_index = output[0].index("width=")
+            esti_cardi = output[0][start_index + 5:end_index - 1]
 
             if self.debug:
-                print("estimated cardinality: {}".format(estiCardi))
-            cardinalities.append(estiCardi)
+                print("estimated cardinality: {}".format(esti_cardi))
+            cardinalities.append(esti_cardi)
         return cardinalities
 
     def save_cardinalities(self, ec, tc):
 
-        with open("queries_with_cardinalities.txt",'w') as f:
+        with open("queries_with_cardinalities.txt", 'w') as f:
             if self.debug:
-                print("Save queries and corresponing cardinalities (firstly estimated, secondly true) on 'queries_with_cardinalities.txt'")
-            for idx, q in enumerate(self.sqlQueries):
-                entry = q + ' '+ str(ec[idx]) + ' '+ str(tc[idx])+'\n'
+                print(
+                    "Save queries and corresponing cardinalities (firstly estimated, secondly true) on 'queries_with_cardinalities.txt'")
+            for idx, q in enumerate(self.sql_cueries):
+                entry = q + ' ' + str(ec[idx]) + ' ' + str(tc[idx]) + '\n'
                 f.write(entry)
-
 
     def get_cardinalities(self):
 
         self.open_database_connection()
-        estimatedCardinalities = self.get_estimated_cardinalities()
-        trueCardinalities = self.get_true_cardinalities()
-        self.save_cardinalities(estimatedCardinalities, trueCardinalities)
+        estimated_cardinalities = self.get_estimated_cardinalities()
+        true_cardinalities = self.get_true_cardinalities()
+        self.save_cardinalities(estimated_cardinalities, true_cardinalities)
         self.close_database_connection()
 
 
