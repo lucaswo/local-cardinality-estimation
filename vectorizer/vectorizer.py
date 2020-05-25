@@ -11,11 +11,7 @@ from typing import List, Tuple, Dict
 class Vectorizer:
     """Constructs a vector consisting of operator code and normalized value for each predicate in the sql query set with set_query method."""
     
-    def __init__(self):
-        """ Intitialises the Vectorizer object by defining available operators and maximum numbers of expressions allowed within a query. Returns the obejct."""
-
-        self.n_max_expressions = 4
-        self.operators = {
+    operators = {
             "=": [0,0,1],
             ">": [0,1,0],
             "<": [1,0,0],
@@ -23,8 +19,17 @@ class Vectorizer:
             ">=": [0,1,1],
             "!=": [1,1,0],
             "IS": [0,0,1]
-        }
-        self.operator_code_length = len(next(iter(self.operators.values())))
+    }
+
+    def __init__(self, n_max_expressions : int):
+        """
+        Intitialises the Vectorizer object by defining available operators and maximum numbers of expressions allowed within a query. Returns the obejct.
+        
+        :param n_max_expressions maximal number of expression allowed to process to conform with the fixed vector length used for each predictor model.
+        """
+
+        self.n_max_expressions = n_max_expressions
+        self.operator_code_length = len(next(iter(Vectorizer.operators.values())))
         self.vectorization_tasks = [] # may become a SimpleQueue in case of multithreading
         self.vectorization_results = []
 
@@ -77,7 +82,7 @@ class Vectorizer:
                 value_normalzed = self.__normalize(predicate, min_max_step, encodings, value)
 
                 end_idx = idx * self.n_max_expressions + self.operator_code_length
-                vector[idx*self.n_max_expressions:end_idx] = self.operators[operator]
+                vector[idx*self.n_max_expressions:end_idx] = Vectorizer.operators[operator]
                 vector[end_idx] = value_normalzed
                 
             # normalize cardinalities
@@ -200,7 +205,7 @@ def vectorizer_tests():
     assert np.allclose(vector_original, vector_truth)
 
     # small vectorization test
-    vectorizer = Vectorizer()
+    vectorizer = Vectorizer(4)
     vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test.csv")
     for vec in vectorizer.vectorize():
         vector_vectorizer, card_est, card_norm = vec[:-2], vec[-2], vec[-1]
@@ -208,7 +213,7 @@ def vectorizer_tests():
         assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
 
     # bigger vectorization test
-    vectorizer = Vectorizer()
+    vectorizer = Vectorizer(4)
     vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test_bigger.csv")
     vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test.csv")
     for vec in vectorizer.vectorize():
