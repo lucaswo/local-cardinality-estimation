@@ -21,7 +21,7 @@ class Vectorizer:
             "IS": [0,0,1]
     }
 
-    def __init__(self, n_max_expressions : int):
+    def __init__(self, n_max_expressions: int):
         """
         Intitialises the Vectorizer object by defining available operators and maximum numbers of expressions allowed within a query. Returns the obejct.
         
@@ -33,7 +33,7 @@ class Vectorizer:
         self.vectorization_tasks = [] # may become a SimpleQueue in case of multithreading
         self.vectorization_results = []
 
-    def add_queries_with_cardinalities(self, queries_with_cardinalities_path):
+    def add_queries_with_cardinalities(self, queries_with_cardinalities_path: str):
         """
         Reads CSV file with format (querySetID;query;encodings;max_card;min_max_step) whereas min_max_step is a dictionary of the format 
         {'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]} and encodings is an empty dictionary if only integer values are processed.
@@ -126,7 +126,7 @@ class Vectorizer:
         return (value - min_val + step) / (max_val - min_val + step)
     
 
-    def __min_max_normalize(self, value, max_cardinality, min_value = 0) -> float:
+    def __min_max_normalize(self, value: number, max_cardinality: int, min_value = 0 : int) -> float:
         """
         Executes a min max normalization
         
