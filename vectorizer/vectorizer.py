@@ -125,7 +125,7 @@ class Vectorizer:
         """
         Executes a min max normalization
         
-        :param value: the value to be normailzed
+        :param value: the value to be normalized
         :param max_cardinality: maximal cardinality of the query set. Its logarithm is the max value for normalization
         :param min_value: minimal value as lower limit. Default is 0
         :return: the normalized value
