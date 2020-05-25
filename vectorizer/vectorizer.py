@@ -30,7 +30,7 @@ class Vectorizer:
 
     def add_queries_with_cardinalities(self, queries_with_cardinalities_path):
         """
-        Reads CSV file with fomrat (querySetID;query;encodings;max_card;min_max_step) whereas min_max_step is a dictionary of the format 
+        Reads CSV file with format (querySetID;query;encodings;max_card;min_max_step) whereas min_max_step is a dictionary of the format 
         {'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]} and encodings is an empty dictionary if only integer values are processed.
         Read queries are added to the list of vectorisation tasks. Attention: queries must have sorted predicates.
 
