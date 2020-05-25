@@ -109,7 +109,7 @@ class Vectorizer:
         :param predicate: attribute of the value
         :param min_max_steps: dictionary of all min, max, step values for each predicate
         :param encodings: dictionary, which maps predicates to encoders
-        :param value: the value to be normailzed
+        :param value: the value to be normalized
         :return: the normalized value
         """
 
