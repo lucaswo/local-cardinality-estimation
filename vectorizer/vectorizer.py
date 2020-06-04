@@ -126,7 +126,7 @@ class Vectorizer:
         return (value - min_val + step) / (max_val - min_val + step)
     
 
-    def __min_max_normalize(self, value: number, max_cardinality: int, min_value = 0 : int) -> float:
+    def __min_max_normalize(self, value: number, max_cardinality: int, min_value: int = 0) -> float:
         """
         Executes a min max normalization
         
