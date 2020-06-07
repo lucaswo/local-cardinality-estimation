@@ -25,7 +25,7 @@ class PostgresEvaluator:
 
     debug: bool = None
 
-    def __init__(self, config: dict = None, debug: bool = True, input_file_name: str = 'queries.sql'):
+    def __init__(self, config: dict = None, debug: bool = True, input_file_name: str = 'queries.csv'):
         """
         Initializer for the PostgresEvaluator
 
@@ -97,15 +97,20 @@ class PostgresEvaluator:
             self.conn.close()
 
     def import_sql_queries(self, path):
-        sql_queries = []
+        if self.debug:
+                print("try to load queries from ", path)
         if path.endswith(".sql"):
             with open(path, 'r') as f:
                 input_file = f.read()
                 sql_queries = list(filter(None, input_file.split('\n')))
-                if self.debug:
-                    print("loaded queries from ", )
         elif path.endswith(".csv"):
             sql_queries = []
+            with open(path, newline='') as f:
+                next(f) # skip header
+                queryreader = csv.reader(f, delimiter=';')
+                for querySetID, query, encodings, max_card, min_max_step in queryreader:
+                    sql_queries.append(query)
+                    print(sql_queries)
         else:
             print("There was no sql or csv file to import the queries found, no further processing possible.")
             sql_queries = []
