@@ -59,10 +59,9 @@ class PostgresEvaluator:
 
         self.debug = debug
 
+        self.query_data = []
         path = "../assets/" + input_file_name
-        self.sql_queries = self.import_sql_queries(path)
-        self.explain_queries = self.generate_explain_queries()
-
+        self.import_sql_queries(path)
 
     def open_database_connection(self):
         """
@@ -103,47 +102,42 @@ class PostgresEvaluator:
             with open(path, 'r') as f:
                 input_file = f.read()
                 sql_queries = list(filter(None, input_file.split('\n')))
+                for query in sql_queries:
+                    self.query_data.append({"query":query})
         elif path.endswith(".csv"):
-            sql_queries = []
             with open(path, newline='') as f:
-                next(f) # skip header
-                queryreader = csv.reader(f, delimiter=';')
-                for querySetID, query, encodings, max_card, min_max_step in queryreader:
-                    sql_queries.append(query)
-                    print(sql_queries)
+                #DictReader uses first line as keyNames
+                queryreader = csv.DictReader(f, delimiter=';')
+                for row in queryreader:
+                    self.query_data.append(row)
+
         else:
             print("There was no sql or csv file to import the queries found, no further processing possible.")
-            sql_queries = []
-
-        return sql_queries
+            self.query_data = []
 
     def generate_explain_queries(self):
-        explain_queries = []
-        for query in self.sql_queries:
-            tmp = query.split('COUNT(*)')
+        for query_as_dict in self.query_data:
+            tmp = query_as_dict['query'].split('COUNT(*)')
             explain_query = "EXPLAIN " + tmp[0] + "*" + tmp[1]
-            explain_queries.append(explain_query)
-        return explain_queries
+            query_as_dict['explain_query'] = explain_query
 
     def get_true_cardinalities(self):
-        cardinalities = []
-        for query in self.sql_queries:
+        for query_as_dict in self.query_data:
             if self.debug:
-                print("Executing: {}".format(query))
-            self.cur.execute(query)
+                print("Executing: {}".format(query_as_dict['query']))
+            self.cur.execute(query_as_dict['query'])
             output = self.cur.fetchone()
             true_cardi = output[0]
             if self.debug:
                 print("true cardinality ('count(*)'): {}".format(true_cardi))
-            cardinalities.append(true_cardi)
-        return cardinalities
+            query_as_dict['true_cardinality'] = true_cardi
 
     def get_estimated_cardinalities(self):
-        cardinalities = []
-        for query in self.explain_queries:
+        self.generate_explain_queries()
+        for query_as_dict in self.query_data:
             if self.debug:
-                print("Executing: {}".format(query))
-            self.cur.execute(query)
+                print("Executing: {}".format(query_as_dict['explain_query']))
+            self.cur.execute(query_as_dict['explain_query'])
 
             output = self.cur.fetchone()
             start_index = output[0].index("rows=")
@@ -152,25 +146,23 @@ class PostgresEvaluator:
 
             if self.debug:
                 print("estimated cardinality: {}".format(esti_cardi))
-            cardinalities.append(esti_cardi)
-        return cardinalities
+            query_as_dict['estimated_cardinality'] = esti_cardi
 
-    def save_cardinalities(self, ec, tc):
+    def save_cardinalities(self):
 
-        with open("queries_with_cardinalities.txt", 'w') as f:
+        with open("../assets/queries_with_cardinalities.txt", 'w') as f:
             if self.debug:
-                print(
-                    "Save queries and corresponing cardinalities (firstly estimated, secondly true) on 'queries_with_cardinalities.txt'")
-            for idx, q in enumerate(self.sql_queries):
-                entry = q + ' ' + str(ec[idx]) + ' ' + str(tc[idx]) + '\n'
+                print("Save human readable queries and corresponing cardinalities (firstly estimated, secondly true) on 'queries_with_cardinalities.txt'")
+            for query_as_dict in self.query_data:
+                entry = query_as_dict['query'] + ' ' + str(query_as_dict['estimated_cardinality']) + ' ' + str(query_as_dict['true_cardinality']) + '\n'
                 f.write(entry)
 
     def get_cardinalities(self):
 
         self.open_database_connection()
-        estimated_cardinalities = self.get_estimated_cardinalities()
-        true_cardinalities = self.get_true_cardinalities()
-        self.save_cardinalities(estimated_cardinalities, true_cardinalities)
+        self.get_estimated_cardinalities()
+        self.get_true_cardinalities()
+        self.save_cardinalities()
         self.close_database_connection()
 
 
