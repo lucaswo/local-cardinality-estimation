@@ -1,12 +1,11 @@
-from typing import List, Tuple, Dict
-
+from typing import Tuple
 import psycopg2 as postgres
 import yaml
 import csv
 
+
 # TODO: Dokumentation für SQL aus CSV/SQL-file laden ergänzen
 # TODO: gegen Fehler absichern, entsprechende Meldungen machen
-# TODO: CSV-Varianten ergänzen
 
 class PostgresEvaluator:
     """
@@ -25,7 +24,7 @@ class PostgresEvaluator:
 
     debug: bool = None
 
-    def __init__(self, config: dict = None, debug: bool = True, input_file_name: str = 'queries.csv'):
+    def __init__(self, config: dict = None, debug: bool = True, input_file_name: str = 'queries.sql'):
         """
         Initializer for the PostgresEvaluator
 
@@ -97,16 +96,17 @@ class PostgresEvaluator:
 
     def import_sql_queries(self, path):
         if self.debug:
-                print("try to load queries from ", path)
+            print("try to load queries from ", path)
         if path.endswith(".sql"):
+            print("Be aware that the resulting csv file will be incomplete and not suitable for further processing.")
             with open(path, 'r') as f:
                 input_file = f.read()
                 sql_queries = list(filter(None, input_file.split('\n')))
                 for query in sql_queries:
-                    self.query_data.append({"query":query})
+                    self.query_data.append({"query": query})
         elif path.endswith(".csv"):
             with open(path, newline='') as f:
-                #DictReader uses first line as keyNames
+                # DictReader uses first line as keyNames
                 queryreader = csv.DictReader(f, delimiter=';')
                 for row in queryreader:
                     self.query_data.append(row)
@@ -148,17 +148,36 @@ class PostgresEvaluator:
                 print("estimated cardinality: {}".format(esti_cardi))
             query_as_dict['estimated_cardinality'] = esti_cardi
 
-    def save_cardinalities(self):
+    def save_cardinalities(self, save_readable: Tuple[bool, str] = [True, '../assets/queries_with_cardinalities.txt']):
+        if save_readable[0]:
+            with open(save_readable[1], 'w') as f:
+                if self.debug:
+                    print(
+                        "Save human readable queries and corresponing cardinalities (firstly estimated, secondly true) on ",
+                        save_readable[1])
+                for query_as_dict in self.query_data:
+                    entry = query_as_dict['query'] + ' ' + str(query_as_dict['estimated_cardinality']) + ' ' + str(
+                        query_as_dict['true_cardinality']) + '\n'
+                    f.write(entry)
 
-        with open("../assets/queries_with_cardinalities.txt", 'w') as f:
-            if self.debug:
-                print("Save human readable queries and corresponing cardinalities (firstly estimated, secondly true) on 'queries_with_cardinalities.txt'")
+        header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step', 'estimated_cardinality',
+                  'true_cardinality']
+        with open('../assets/queries_with_cardinalities.csv', 'w', newline='') as csvfile:
+            querywriter = csv.DictWriter(csvfile, delimiter=';', fieldnames=header)
+            querywriter.writeheader()
             for query_as_dict in self.query_data:
-                entry = query_as_dict['query'] + ' ' + str(query_as_dict['estimated_cardinality']) + ' ' + str(query_as_dict['true_cardinality']) + '\n'
-                f.write(entry)
+                ordered_copy = {'querySetID': query_as_dict.get('querySetID'),
+                                'query': query_as_dict.get('query'),
+                                'encodings': query_as_dict.get('encodings'),
+                                'max_card': query_as_dict.get('max_card'),
+                                'min_max_step': query_as_dict.get('min_max_step'),
+                                'estimated_cardinality': query_as_dict.get('estimated_cardinality'),
+                                'true_cardinality': query_as_dict.get('true_cardinality')}
+                querywriter.writerow(ordered_copy)
+        if self.debug:
+            print("Added estimated and true cardinalities to query list")
 
     def get_cardinalities(self):
-
         self.open_database_connection()
         self.get_estimated_cardinalities()
         self.get_true_cardinalities()

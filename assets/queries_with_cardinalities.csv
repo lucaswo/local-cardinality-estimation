@@ -1,0 +1,21 @@
+querySetID;query;encodings;max_card;min_max_step;estimated_cardinality;true_cardinality
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id=1 AND mi_idx.info_type_id>=67 AND t.production_year>1936;";;;;12643133;20672175
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id>=2 AND mi_idx.info_type_id>18 AND t.production_year<=2022;";;;;18810142;9022531
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id>2 AND mi_idx.info_type_id!=80 AND t.production_year=2061;";;;;1;0
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id!=1 AND mi_idx.info_type_id>56 AND t.production_year=2014;";;;;1078919;346736
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id<2 AND mi_idx.info_type_id>68 AND t.production_year>=1882;";;;;13067509;21015669
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id<1 AND mi_idx.info_type_id=66 AND t.production_year<2059;";;;;1;0
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id<2 AND mi_idx.info_type_id=13 AND t.production_year>1894;";;;;717420;5098905
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id<=2 AND mi_idx.info_type_id<33 AND t.production_year>=2020;";;;;146269;4644
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id>=1 AND mi_idx.info_type_id>75 AND t.production_year>=2010;";;;;13633678;7532844
+;"SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id!=2 AND mi_idx.info_type_id<103 AND t.production_year<=2068;";;;;65365195;82638788
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id<=1 AND mk.keyword_id<122405 AND t.production_year=2049;";;;;8928;0
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id<=1 AND mk.keyword_id>40919 AND t.production_year!=1914;";;;;2760041;7404818
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id<1 AND mk.keyword_id!=4812 AND t.production_year<2110;";;;;8;0
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id<=1 AND mk.keyword_id=55428 AND t.production_year<=1891;";;;;1;0
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id<1 AND mk.keyword_id<=103943 AND t.production_year=1893;";;;;1;0
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id<2 AND mk.keyword_id>181974 AND t.production_year=2055;";;;;109;0
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id<2 AND mk.keyword_id!=131405 AND t.production_year!=1977;";;;;17715574;48122595
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id=2 AND mk.keyword_id>=75138 AND t.production_year<1878;";;;;4;0
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id>=2 AND mk.keyword_id<189734 AND t.production_year<1956;";;;;1279443;769636
+;"SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id<1 AND mk.keyword_id!=130820 AND t.production_year<2007;";;;;4;0
