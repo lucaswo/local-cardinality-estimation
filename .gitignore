@@ -154,4 +154,6 @@ gen
 .idea/misc.xml
 .idea/modules.xml
 .idea/vcs.xml
+vectorizer/*.yaml
+vectorizer/*.csv
 /meta-collector/meta_information.yaml
