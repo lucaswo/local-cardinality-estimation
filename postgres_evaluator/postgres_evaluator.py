@@ -4,9 +4,6 @@ import yaml
 import csv
 
 
-# TODO: Dokumentation für SQL aus CSV/SQL-file laden ergänzen
-# TODO: gegen Fehler absichern, entsprechende Meldungen machen
-
 class PostgresEvaluator:
     """
     Class for PostgresEvaluator. Using psycopg2 to establish a connection to the postgres database.
@@ -65,7 +62,6 @@ class PostgresEvaluator:
     def open_database_connection(self):
         """
         connect to the postgres database with the information given in the initialization
-
         :return: void
         """
 
@@ -82,7 +78,6 @@ class PostgresEvaluator:
     def close_database_connection(self):
         """
         close the connection to the database
-
         :return: void
         """
 
@@ -95,6 +90,11 @@ class PostgresEvaluator:
             self.conn.close()
 
     def import_sql_queries(self, path):
+        """
+        load the queries from sql or csv file, wich is provided by the sql_generator submodule
+        :param path: path to the file with the given queries (per default in asset folder), relative to the postgres_evaluator folder
+        :return: void
+        """
         if self.debug:
             print("try to load queries from ", path)
         if path.endswith(".sql"):
@@ -116,12 +116,20 @@ class PostgresEvaluator:
             self.query_data = []
 
     def generate_explain_queries(self):
+        """
+        generate EXPLAIN sql statements for cardinality estimation
+        :return: void
+        """
         for query_as_dict in self.query_data:
             tmp = query_as_dict['query'].split('COUNT(*)')
             explain_query = "EXPLAIN " + tmp[0] + "*" + tmp[1]
             query_as_dict['explain_query'] = explain_query
 
     def get_true_cardinalities(self):
+        """
+        execute the given queries against the database and calculate the true cardinality from each query
+        :return: void
+        """
         for query_as_dict in self.query_data:
             if self.debug:
                 print("Executing: {}".format(query_as_dict['query']))
@@ -133,6 +141,10 @@ class PostgresEvaluator:
             query_as_dict['true_cardinality'] = true_cardi
 
     def get_estimated_cardinalities(self):
+        """
+        execute the adapted queries against the database and calculate the postgres cardinality estimation for each query
+        :return: void
+        """
         self.generate_explain_queries()
         for query_as_dict in self.query_data:
             if self.debug:
@@ -148,7 +160,16 @@ class PostgresEvaluator:
                 print("estimated cardinality: {}".format(esti_cardi))
             query_as_dict['estimated_cardinality'] = esti_cardi
 
-    def save_cardinalities(self, save_readable: Tuple[bool, str] = [True, '../assets/queries_with_cardinalities.txt'], eliminate_null_queries: bool = True):
+    def save_cardinalities(self, save_readable: Tuple[bool, str] = [True, '../assets/queries_with_cardinalities.txt'],
+                           eliminate_null_queries: bool = True):
+        """
+        execute the adapted queries against the database and calculate the postgres cardinality estimation for each query
+
+        :param eliminate_null_queries: if True only queries with true cardinality > 0 will be saved
+        :param save_readable: if True: save queries and corresponing cardinalities human readable in an separate text file, per default as assets/queries_with_cardinalities.txt
+
+        :return: void
+        """
         if save_readable[0]:
             with open(save_readable[1], 'w') as f:
                 if self.debug:
@@ -177,14 +198,18 @@ class PostgresEvaluator:
                 if eliminate_null_queries:
                     if ordered_copy['true_cardinality'] != None and ordered_copy['true_cardinality'] > 0:
                         querywriter.writerow(ordered_copy)
-                        querycounter+=1
+                        querycounter += 1
                 else:
                     querywriter.writerow(ordered_copy)
-                    querycounter+=1
+                    querycounter += 1
         if self.debug:
             print("Added estimated and true cardinalities to query list")
 
     def get_cardinalities(self):
+        """
+        function that manage the whole process of cardinality estimation/calculation
+        :return: void
+        """
         self.open_database_connection()
         self.get_estimated_cardinalities()
         self.get_true_cardinalities()
