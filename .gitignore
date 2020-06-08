@@ -157,3 +157,6 @@ gen
 vectorizer/*.yaml
 vectorizer/*.csv
 /meta-collector/meta_information.yaml
+
+#MacOS specific Files
+.DS_Store
