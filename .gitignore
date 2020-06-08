@@ -154,9 +154,6 @@ gen
 .idea/misc.xml
 .idea/modules.xml
 .idea/vcs.xml
-meta-collector/
-sql-generator/
-vectorizer/
-
-#MacOS specific files
-.DS_Store
+vectorizer/*.yaml
+vectorizer/*.csv
+/meta-collector/meta_information.yaml

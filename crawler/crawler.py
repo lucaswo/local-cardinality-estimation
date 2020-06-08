@@ -155,7 +155,7 @@ class Crawler:
         return tables
 
     def sql_attribute_unpacker(self, where_string_list: List[str], amount_join_attributes: int) \
-            -> (List[str], List[str]):
+            -> Tuple[List[str], List[str]]:
         """
         Unpack the attribute strings from sql-file into sets containing the attributes.
 
@@ -187,7 +187,7 @@ class Crawler:
 
         return list(join_attributes_set), list(selection_attributes_set)
 
-    def csv_attribute_unpacker(self, attribute_tuples: List[Tuple[str, str]]) -> (List[str], List[str]):
+    def csv_attribute_unpacker(self, attribute_tuples: List[Tuple[str, str]]) -> Tuple[List[str], List[str]]:
         """
         Unpack the attribute strings from csv-file into sets containing the attributes.
 
