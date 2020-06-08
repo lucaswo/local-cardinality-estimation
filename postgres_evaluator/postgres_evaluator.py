@@ -24,7 +24,7 @@ class PostgresEvaluator:
 
     debug: bool = None
 
-    def __init__(self, config: dict = None, debug: bool = True, input_file_name: str = 'queries.sql'):
+    def __init__(self, config: dict = None, debug: bool = True, input_file_name: str = 'queries.csv'):
         """
         Initializer for the PostgresEvaluator
 
@@ -148,7 +148,7 @@ class PostgresEvaluator:
                 print("estimated cardinality: {}".format(esti_cardi))
             query_as_dict['estimated_cardinality'] = esti_cardi
 
-    def save_cardinalities(self, save_readable: Tuple[bool, str] = [True, '../assets/queries_with_cardinalities.txt']):
+    def save_cardinalities(self, save_readable: Tuple[bool, str] = [True, '../assets/queries_with_cardinalities.txt'], eliminate_null_queries: bool = True):
         if save_readable[0]:
             with open(save_readable[1], 'w') as f:
                 if self.debug:
@@ -165,6 +165,7 @@ class PostgresEvaluator:
         with open('../assets/queries_with_cardinalities.csv', 'w', newline='') as csvfile:
             querywriter = csv.DictWriter(csvfile, delimiter=';', fieldnames=header)
             querywriter.writeheader()
+            querycounter = 0
             for query_as_dict in self.query_data:
                 ordered_copy = {'querySetID': query_as_dict.get('querySetID'),
                                 'query': query_as_dict.get('query'),
@@ -173,7 +174,13 @@ class PostgresEvaluator:
                                 'min_max_step': query_as_dict.get('min_max_step'),
                                 'estimated_cardinality': query_as_dict.get('estimated_cardinality'),
                                 'true_cardinality': query_as_dict.get('true_cardinality')}
-                querywriter.writerow(ordered_copy)
+                if eliminate_null_queries:
+                    if ordered_copy['true_cardinality'] != None and ordered_copy['true_cardinality'] > 0:
+                        querywriter.writerow(ordered_copy)
+                        querycounter+=1
+                else:
+                    querywriter.writerow(ordered_copy)
+                    querycounter+=1
         if self.debug:
             print("Added estimated and true cardinalities to query list")
 
