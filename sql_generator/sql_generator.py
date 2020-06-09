@@ -76,6 +76,21 @@ class SQLGenarator:
 
         return (op, val)
 
+    def max_query_number(self,desired_number,entry):
+        q_count = 1
+        for col in entry.values():
+            # count of possible values
+            range = (col[1]-col[0]+1)/col[2]
+
+            # max entries * number of operators -2 for <min or >max
+            max = (range*6)-2
+            q_count*=max
+
+        if q_count < desired_number:
+            raise ValueError('There are less queries to generate than desired! Maximum Quantity: %d < %d'%(q_count,desired_number))
+
+        return q_count
+
     def generate_queries(self, qnumber: int = 10, save_readable: str = '../assets/queries.sql'):
         '''
         Generates given number of SQL Queries with given meta-information.
@@ -86,6 +101,8 @@ class SQLGenarator:
         :param qnumber: Number of generated queries per meta-entry
         :return: list with queries as String
         '''
+
+
         all_queries = []
         header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step']
 
@@ -94,6 +111,8 @@ class SQLGenarator:
             writer.writeheader()
 
             for key, value in self.q_set.items():
+                #calculate maximum number of possible queries, throw error if qnumber is higher
+                print('Maximum Number of Queries to generate for entry %d: %d'%(key,self.max_query_number(qnumber,value['min_max_step'])))
                 # generate queries until there are 'number' of unique queries
                 queries = []
                 while len(queries) < qnumber:
@@ -129,5 +148,5 @@ class SQLGenarator:
         return queries
 
 
-gen = SQLGenarator(config='../assets/meta_information.yaml')
-gen.generate_queries()
+#gen = SQLGenarator(config='../assets/meta_information.yaml')
+#gen.generate_queries()
