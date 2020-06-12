@@ -217,5 +217,5 @@ class PostgresEvaluator:
         self.close_database_connection()
 
 if __name__ == "__main__":
-pc = PostgresEvaluator()
-pc.get_cardinalities()
+    pc = PostgresEvaluator()
+    pc.get_cardinalities()
