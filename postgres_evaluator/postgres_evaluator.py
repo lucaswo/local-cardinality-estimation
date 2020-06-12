@@ -177,7 +177,8 @@ class PostgresEvaluator:
                         "Save human readable queries and corresponing cardinalities (firstly estimated, secondly true) on ",
                         save_readable[1])
                 for query_as_dict in self.query_data:
-                    entry = query_as_dict['query'] + ' ' + str(query_as_dict['estimated_cardinality']) + ' ' + str(
+                    entry = f"{query_as_dict['query']} {query_as_dict['estimated_cardinality']} {query_as_dict['true_cardinality']}\n";
+
                         query_as_dict['true_cardinality']) + '\n'
                     f.write(entry)
 
