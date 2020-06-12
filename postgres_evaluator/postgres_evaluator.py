@@ -179,7 +179,6 @@ class PostgresEvaluator:
                 for query_as_dict in self.query_data:
                     entry = f"{query_as_dict['query']} {query_as_dict['estimated_cardinality']} {query_as_dict['true_cardinality']}\n";
 
-                        query_as_dict['true_cardinality']) + '\n'
                     f.write(entry)
 
         header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step', 'estimated_cardinality',
