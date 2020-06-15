@@ -1,8 +1,7 @@
 import yaml
-from postgres_evaluator import postgres_evaluator
-from sql_generator import sql_generator
+from postgres_evaluator import PostgresEvaluator
+from sql_generator import SQLGenarator
 import pandas as pd
-
 
 class QueryCommunicator():
     '''
@@ -35,14 +34,14 @@ class QueryCommunicator():
         Function for generating queries and their cardinalities if nullqueries are allowed.
         :return:
         '''
-        generator = sql_generator.SQLGenarator(config=self.meta)
+        generator = SQLGenarator(config=self.meta)
         generator.generate_queries(qnumber=self.query_number, save_readable='../assets/null_including_queries.sql')
 
-        with open('../postgres_evaluator/config.yaml', 'r') as c:
+        with open('postgres_evaluator/config.yaml', 'r') as c:
             config = yaml.safe_load(c)
 
         # TODO: test if it works with the DB Connection, then uncommend
-        # evaluator = postgres_evaluator.PostgresEvaluator(config=config)
+        # evaluator = PostgresEvaluator(config=config)
         # evaluator.get_cardinalities()
 
 
@@ -57,14 +56,14 @@ class QueryCommunicator():
         generate = int(self.query_number * 1.5)
         # number of distinct queries
 
-        generator = sql_generator.SQLGenarator(config=self.meta)
+        generator = SQLGenarator(config=self.meta)
         generator.generate_queries(qnumber=generate, save_readable='../assets/nullfree_queries.sql')
         # TODO: change code in PG Evaluator, that a config file can be chosen, instead of loading a config file and giving th dict to the Evaluator
-        with open('../postgres_evaluator/config.yaml','r') as c:
+        with open('postgres_evaluator/config.yaml','r') as c:
             config = yaml.safe_load(c)
 
         #TODO: test if it works with the DB Connection, then uncommend
-        #evaluator = postgres_evaluator.PostgresEvaluator(config=config)
+        #evaluator = PostgresEvaluator(config=config)
         #evaluator.get_cardinalities()
         reduced_queries = self.reduce_queries()
 
