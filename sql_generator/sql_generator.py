@@ -10,7 +10,7 @@ class SQLGenarator:
     Class for generating SQL queries. Uses Meta Information from MetaCollector Step before.
     '''
 
-    def __init__(self, config: str = None):
+    def __init__(self, config: str = None, debug:bool=False):
         """
         Initializer of the SQL Generator. Reads the needed parameters from the meta-information.yaml generated from the
         MetaCollector which was possibly executed before.
@@ -25,11 +25,13 @@ class SQLGenarator:
         if config is None:
             with open('meta_information.yaml', 'r') as file:
                 self.q_set = yaml.safe_load(file)
-                print(self.q_set, '\n', type(self.q_set))
+                if self.debug == True:
+                    print(self.q_set, '\n', type(self.q_set))
         else:
             with open(config, 'r') as file:
                 self.q_set = yaml.safe_load(file)
-                print(self.q_set, '\n', type(self.q_set))
+                if self.debug == True:
+                    print(self.q_set, '\n', type(self.q_set))
 
         for key, gen_params in self.q_set.items():
 
@@ -136,7 +138,6 @@ class SQLGenarator:
                         writer.writerow({'querySetID': key, 'query': sql, 'encodings': value['encodings'],
                                          'max_card': value['max_card'][0], 'min_max_step': value['min_max_step']})
 
-                    print(key, sql)
                     queries.append((key, sql))
                     queries = list(set(queries))
 
