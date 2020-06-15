@@ -25,12 +25,12 @@ class SQLGenarator:
         if config is None:
             with open('meta_information.yaml', 'r') as file:
                 self.q_set = yaml.safe_load(file)
-                if self.debug == True:
+                if debug == True:
                     print(self.q_set, '\n', type(self.q_set))
         else:
             with open(config, 'r') as file:
                 self.q_set = yaml.safe_load(file)
-                if self.debug == True:
+                if debug == True:
                     print(self.q_set, '\n', type(self.q_set))
 
         for key, gen_params in self.q_set.items():
@@ -42,9 +42,6 @@ class SQLGenarator:
 
             if gen_params['table_names'] is None or len(gen_params['table_names']) == 0:
                 raise ValueError('There has to be at least one table!')
-
-            if len(gen_params['columns']) != len(gen_params['min_max_step']):
-                raise IndexError('For every given Column there has to be exactly one min_max_step definitition!')
 
             if gen_params['join_attributes'] is None and len(gen_params['tables'] > 1):
                 raise ValueError('There are tables to join but no join attributes are given!')
@@ -80,7 +77,8 @@ class SQLGenarator:
 
     def max_query_number(self,desired_number,entry):
         q_count = 1
-        for col in entry.values():
+        for min_max in entry:
+            col = min_max[3]
             # count of possible values
             range = (col[1]-col[0]+1)/col[2]
 
@@ -114,7 +112,7 @@ class SQLGenarator:
 
             for key, value in self.q_set.items():
                 #calculate maximum number of possible queries, throw error if qnumber is higher
-                print('Maximum Number of Queries to generate for entry %d: %d'%(key,self.max_query_number(qnumber,value['min_max_step'])))
+                print('Maximum Number of Queries to generate for entry %d: %d'%(key,self.max_query_number(qnumber,value['columns'])))
                 # generate queries until there are 'number' of unique queries
                 queries = []
                 while len(queries) < qnumber:
@@ -123,7 +121,7 @@ class SQLGenarator:
                     comparison = []
 
                     for col in columns:
-                        op, val = self.random_operator_value(value['min_max_step'][col[0]], val_type=col[2])
+                        op, val = self.random_operator_value(col[3], val_type=col[2])
                         comparison.append({'col': col, 'op': op, 'val': val})
 
                     # not formatted yet
@@ -135,8 +133,8 @@ class SQLGenarator:
                                                                       val=c['val']) for c in comparison))
 
                     if sql not in queries:
-                        writer.writerow({'querySetID': key, 'query': sql, 'encodings': value['encodings'],
-                                         'max_card': value['max_card'][0], 'min_max_step': value['min_max_step']})
+                        writer.writerow({'querySetID': key, 'query': sql, 'encodings': [enc[4] for enc in value['columns']],
+                                         'max_card': value['max_card'][0], 'min_max_step': [m[3] for m in value['columns']]})
 
                     queries.append((key, sql))
                     queries = list(set(queries))
@@ -149,5 +147,5 @@ class SQLGenarator:
         return queries
 
 
-#gen = SQLGenarator(config='../assets/meta_information.yaml')
-#gen.generate_queries()
+gen = SQLGenarator(config='../assets/meta_information.yaml',debug=True)
+gen.generate_queries()
