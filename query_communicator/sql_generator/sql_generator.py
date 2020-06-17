@@ -146,6 +146,6 @@ class SQLGenarator:
 
         return queries
 
-
-gen = SQLGenarator(config='../assets/meta_information.yaml',debug=True)
-gen.generate_queries()
+if __name__ == "__main__":
+    gen = SQLGenarator(config='../assets/meta_information.yaml',debug=True)
+    gen.generate_queries()
