@@ -1,8 +1,7 @@
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, Union
 
 import numpy as np
 import yaml
-from keras import backend as K
 from keras.callbacks import History
 from keras.layers import Dense, Input, Dropout
 from keras.models import Model, load_model
@@ -15,7 +14,6 @@ class Estimator:
     changed in 'config.yaml'.
     """
 
-    max_card: float = None
     input_length: int = None
 
     config: Dict = None
@@ -41,7 +39,7 @@ class Estimator:
         :param data: Optional parameter for giving the data for training and testing. If given it has to be a Dict with
             at least "x" and "y" and optionally "postgres_estimate" as keys. The values have to be numpy.ndarray. For
             key "x" it should be the vectorized queries, for key "y" the true cardinalities in the same order and for
-            optional key "postgres_estimate" the estimation of the postgres optimizer for the query.
+            optional key "postgres_estimate" the estimates of the postgres optimizer for the query.
         :param model: Option to pass a Model which can be used.
         :param model_path: Option to pass a path to a saved model in an .h5 file.
         :param debug: Boolean whether to print additional information while processing.
@@ -110,52 +108,14 @@ class Estimator:
 
         return self.model
 
-    @staticmethod
-    def denormalize(y, y_min: float, y_max: float):
+    def load_model(self, model_path: str):
         """
-        :param y: tensor filled with values to denormalize
-        :param y_min: minimum value for y
-        :param y_max: maximum value for y
-        :return: tensor with denormalized values
+        Method for loading an already existing model wich was saved to file.
+
+        :param model_path: Path to the file containing the model to load
         """
 
-        return K.exp(y * (y_max - y_min) + y_min)
-
-    @staticmethod
-    def denormalize_np(y: np.ndarray, y_min: float, y_max: float) -> np.ndarray:
-        """
-        :param y: numpy-array filled with values to denormalize
-        :param y_min: minimum value for y
-        :param y_max: maximum value for y
-        :return: numpy-array with denormalized values
-        """
-
-        return np.exp(y * (y_max - y_min) + y_min)
-
-    @staticmethod
-    def normalize(y: np.ndarray) -> np.ndarray:
-        """
-        :param y: numpy-array with unnormalized values
-        :return: numpy-array with normalized values
-        """
-
-        y = np.log(y)
-        # if self.max_card is not None:
-        #     return (y - 0) / (self.max_card - 0)
-        # else:
-        return (y - min(y)) / (max(y) - min(y))
-
-    def q_loss(self, y_true, y_pred):
-        y_true = self.denormalize(y_true, 0, self.max_card)
-        y_pred = self.denormalize(y_pred, 0, self.max_card)
-
-        return K.maximum(y_true, y_pred) / K.minimum(y_true, y_pred)
-
-    def q_loss_np(self, y_true, y_pred) -> np.ndarray:
-        y_true = self.denormalize_np(y_true, 0, self.max_card)
-        y_pred = self.denormalize_np(y_pred, 0, self.max_card)
-
-        return np.maximum(y_true, y_pred) / np.minimum(y_true, y_pred)
+        self.model = load_model(model_path)
 
     def load_data_file(self, file_path: str, override: bool = False) -> Dict[str, np.ndarray]:
         """
@@ -216,11 +176,9 @@ class Estimator:
 
         self.data = data
 
-        self.max_card = np.log(np.max(self.data["y"]))
-
         self.input_length = len(self.data["x"][0])
 
-        self.data["y"] = self.normalize(self.data["y"])
+        self.data["y"] = self.data["y"]
 
     def split_data(self, split: float = 0.9):
         """
