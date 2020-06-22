@@ -75,10 +75,10 @@ class Vectorizer:
         """
 
         while len(self.vectorization_tasks) > 0:
-            _, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
+            querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
 
             n_total_columns = len(min_max_step)
-            vector = np.zeros(n_total_columns * self.n_max_expressions + 2) # constant 2 for estimated_cardinality and true_cardinality
+            vector = np.zeros(n_total_columns * self.n_max_expressions + 3) # constant 3 for estimated_cardinality, true_cardinality and querySetID
 
             # vectorize query
             for idx, query in enumerate(query): # requires sorted predicates
@@ -92,6 +92,8 @@ class Vectorizer:
             # normalize cardinalities
             vector[-2] = self.__min_max_normalize(estimated_cardinality, max_card)
             vector[-1] = self.__min_max_normalize(true_cardinality, max_card)
+
+            vector = np.insert(vector, 0, querySetID, axis=0)
 
             self.vectorization_results.append(vector)
         return self.vectorization_results
@@ -159,7 +161,7 @@ class Vectorizer:
         """
 
         np.save(os.path.join(path, f"{filename}.npy"), np.array(self.vectorization_results) )
-        np.savetxt( os.path.join(path, f"{filename}.csv"), np.array(self.vectorization_results), delimiter=',', fmt="%.18g")
+        np.savetxt( os.path.join(path, f"{filename}.csv"), np.array(self.vectorization_results), delimiter=',', fmt="%.18g", header="querySetID, [vector], estimated_cardinality, true cardinality")
 
 def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]) -> np.array:
     """
@@ -238,7 +240,7 @@ def vectorizer_tests():
     vectorizer = Vectorizer(4)
     vectorizer.add_queries_with_cardinalities("assets/queries_with_cardinalities.csv")
     vectorizer_vectors = np.array(vectorizer.vectorize())
-    assert np.allclose(vectorizer_vectors[:,:-2], original_vectors),  f"{vectorizer_vectors[:,:-2]} not close \n{original_vectors}"
+    assert np.allclose(vectorizer_vectors[:,1:-3], original_vectors),  f"{vectorizer_vectors[:,1:-3]} not close \n{original_vectors}"
     #vector_vectorizer, card_est, card_norm = vec[:-2], vec[-2], vec[-1]
     #assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
     vectorizer.save("/mnt/data/programming/tmp/", "asset_queries_with_cardinalites_vectors")
