@@ -24,7 +24,7 @@ class MetaCollector:
 
     debug: bool = None
 
-    def __init__(self, config: dict = None, debug: bool = True):
+    def __init__(self, config: dict = None, config_file_path: str = "config.yaml", debug: bool = True):
         """
         Initializer for the MetaCollector
 
@@ -35,11 +35,12 @@ class MetaCollector:
         :param config: if given: it has to be a dictionary with at least db_name, user and password and optionally host
             and port (default to host: localhost, port: 5432 if not given)
             if not given: the config file 'config.yaml' is used for these settings
+        :param config_file_path: path for the config-file -> only necessary if no config is given
         :param debug: boolean whether to print additional information while processing
         """
 
         if config is None:
-            with open("config.yaml") as file:
+            with open(config_file_path) as file:
                 config = yaml.safe_load(file)
 
         if config["db_name"] is None or config["db_name"] == "":
@@ -331,7 +332,7 @@ class MetaCollector:
 
         return result_dict
 
-    def get_meta_from_file(self, file_path: str, save: bool = True, save_file_name: str = None, mode: int = 0,
+    def get_meta_from_file(self, file_path: str, save: bool = True, save_file_path: str = None, mode: int = 0,
                            override: bool = True) -> Dict[int, any]:
         """
         Method for collecting meta data for the information given in a file from Crawler or at least a file formatted
@@ -339,16 +340,16 @@ class MetaCollector:
 
         :param file_path: Path to the file. Format has to be the same like the output of Crawler
         :param save: Whether to save the information to file or not. -> It is recommended to do so.
-        :param save_file_name: Optional name for the file.
+        :param save_file_path: Optional path for the save-file.
         :param mode: 0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
         :param override: Whether to override an already existing meta_information file.
         :return: The solution dict.
         """
 
         if override:
-            if save_file_name:
-                if os.path.isfile(save_file_name + ".yaml"):
-                    os.remove(save_file_name + ".yaml")
+            if save_file_path:
+                if os.path.isfile(save_file_path + ".yaml"):
+                    os.remove(save_file_path + ".yaml")
             else:
                 if os.path.isfile("meta_information.yaml"):
                     os.remove("meta_information.yaml")
@@ -367,8 +368,8 @@ class MetaCollector:
                                                   save=False, batchmode=True, mode=mode)}
 
             if save:
-                if save_file_name:
-                    self.save_meta(solution_dict, save_file_name, mode="a+")
+                if save_file_path:
+                    self.save_meta(solution_dict, save_file_path, mode="a+")
                 else:
                     self.save_meta(solution_dict, mode="a+")
 
@@ -407,10 +408,3 @@ class MetaCollector:
         if self.debug:
             print("Executing: {}".format(sql_string))
         self.cur.execute(sql_string)
-
-
-mc = MetaCollector()
-# example which should work -> takes quite a while to be processed
-# mc.get_meta(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
-
-mc.get_meta_from_file(file_path="../assets/solution_dict.yaml", save_file_name="../assets/meta_information")

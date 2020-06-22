@@ -23,8 +23,8 @@ class Estimator:
 
     model: Model = None
 
-    def __init__(self, config: Dict[str, Any] = None, data: Dict[str, np.ndarray] = None, model: Model = None,
-                 model_path: str = None, debug: bool = True):
+    def __init__(self, config: Dict[str, Any] = None, config_file_path: str = "config.yaml",
+                 data: Dict[str, np.ndarray] = None, model: Model = None, model_path: str = None, debug: bool = True):
         """
         Initializer for the Estimator.
 
@@ -36,6 +36,7 @@ class Estimator:
             if given: It must contain at least the fields "loss_function", "dropout", "learning_rate",
             "kernel_initializer", "activation_strategy" and "layer".
             if not given: the config file 'config.yaml' is used for these settings.
+        :param config_file_path: path for the config-file -> only necessary if no config is given
         :param data: Optional parameter for giving the data for training and testing. If given it has to be a Dict with
             at least "x" and "y" and optionally "postgres_estimate" as keys. The values have to be numpy.ndarray. For
             key "x" it should be the vectorized queries, for key "y" the true cardinalities in the same order and for
@@ -51,7 +52,7 @@ class Estimator:
             self.load_model(model_path)
         else:
             if config is None:
-                with open("config.yaml") as file:
+                with open(config_file_path) as file:
                     config = yaml.safe_load(file)
 
             conf_keys = ["loss_function", "dropout", "learning_rate", "kernel_initializer", "activation_strategy"]
@@ -265,7 +266,8 @@ class Estimator:
         return self.model.predict(data).flatten()
 
     def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 1, shuffle: bool = True,
-            batch_size: int = 32, validation_split: float = 0.1, override_model: bool = False) -> np.ndarray:
+            batch_size: int = 32, validation_split: float = 0.1, override_model: bool = False, save_model: bool = True,
+            save_model_file_path: str = "model") -> np.ndarray:
         """
         Method for a full run of the Estimator, with training and testing.
 
@@ -280,16 +282,22 @@ class Estimator:
         :param validation_split: How much of the data should be taken as validation set -> these are taken from the
             training data, not the test data, and are reselected for every epoch.
         :param override_model: Whether to override a probably already existing model.
+        :param save_model: Whether to save the trained model to file.
+        :param save_model_file_path: When save_model==True this parameter is required to give the path where the model
+            should be saved.
         :return: A numpy.ndarray containing the calculated q-error.
         """
 
         if data_file_path:
             self.load_data_file(data_file_path)
         self.split_data()
-        self.get_model(self.input_length)
+        self.get_model(self.input_length, override=override_model)
         history = self.train(epochs=epochs, verbose=verbose, shuffle=shuffle, batch_size=batch_size,
                              validation_split=validation_split)
         predictions = self.test()
+
+        if save_model:
+            self.save_model(filename=save_model_file_path)
 
         q_error_means = np.mean(self.q_loss_np(self.test_data["y"], predictions))
 

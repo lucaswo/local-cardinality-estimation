@@ -11,7 +11,7 @@ class Crawler:
 
     operators = ["<=", "!=", ">=", "=", "<", ">"]
 
-    def read_file(self, file_path: str):
+    def read_file(self, file_path: str) -> Tuple[Dict, str]:
         """
         Generic Method for reading the sql statements from a given .sql or a .csv file.
 
@@ -20,13 +20,14 @@ class Crawler:
         """
 
         if file_path and file_path.split(".")[-1] == "csv":
-            self.read_csv_file(file_path)
+            return self.read_csv_file(file_path)
         elif file_path and file_path.split(".")[-1] == "sql":
-            self.read_sql_file(file_path)
+            return self.read_sql_file(file_path)
         else:
             raise ValueError("The given file-path points neither to a .csv nor a .sql file. Please correct this!")
 
-    def read_sql_file(self, file_path: str):
+    @staticmethod
+    def read_sql_file(file_path: str) -> Tuple[Dict, str]:
         """
         Read the sql statements from given sql file.
 
@@ -56,9 +57,10 @@ class Crawler:
 
                 command_dict[command[0]].append(command[1])
 
-        self.create_solution_dict(command_dict, "sql")
+        return command_dict, "sql"
 
-    def read_csv_file(self, file_path: str):
+    @staticmethod
+    def read_csv_file(file_path: str) -> Tuple[Dict, str]:
         """
         Read the csv formatted sql statements from given file.
 
@@ -89,7 +91,7 @@ class Crawler:
 
                 command_dict[command[0]].append((command[1], command[2]))
 
-        self.create_solution_dict(command_dict, "csv")
+        return command_dict, "csv"
 
     def create_solution_dict(self, command_dict: Dict[str, List[str] or List[Tuple[str, str]]], file_type: str) \
             -> Dict[int, Dict[str, List[str or Tuple[str, str]]]]:
@@ -125,8 +127,6 @@ class Crawler:
                                 "selection_attributes": selection_attributes}
 
             i += 1
-
-        self.save_solution_dict(solution_dict)
 
         return solution_dict
 
@@ -221,24 +221,35 @@ class Crawler:
 
     @staticmethod
     def save_solution_dict(solution_dict: Dict[int, Dict[str, List[str or Tuple[str, str]]]],
-                           filename: str = "solution_dict"):
+                           save_file_path: str = "solution_dict"):
         """
         Save the solution to file with specified filename.
 
         :param solution_dict: The dict containing the data to save.
-        :param filename: The name of the file in which the data should be saved. The .yaml ending is added automatically.
+        :param save_file_path: The path for the file in which the data should be saved. The .yaml ending is added
+        automatically.
         """
 
         if not solution_dict:
             raise ValueError("There is no dict containing the solution given.")
 
-        if filename.endswith(".yaml"):
-            filename = filename.replace(".yaml", "")
+        if save_file_path.endswith(".yaml"):
+            save_file_path = save_file_path.replace(".yaml", "")
 
-        with open("{}.yaml".format(filename), "w") as file:
+        with open("{}.yaml".format(save_file_path), "w") as file:
             yaml.safe_dump(solution_dict, file)
 
+    def run(self, file_path: str, save_file_path: str) -> Dict[int, Dict[str, List[str or Tuple[str, str]]]]:
+        """
+        Method for the whole crawling process.
 
-cra = Crawler()
-# cra.read_file("job-light.sql")
-cra.read_file("job-light.csv")
+        :param file_path: The file in to read which the sql-statements are saved.
+        :param save_file_path: The path where to save the results.
+        :return:
+        """
+
+        command_dict, file_type = self.read_file(file_path=file_path)
+        solution_dict = self.create_solution_dict(command_dict=command_dict, file_type=file_type)
+        self.save_solution_dict(solution_dict=solution_dict, save_file_path=save_file_path)
+
+        return solution_dict
