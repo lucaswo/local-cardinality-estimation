@@ -48,7 +48,7 @@ class Estimator:
         if model:
             self.model = model
         elif model_path:
-            self.model = load_model(model_path)
+            self.load_model(model_path)
         else:
             if config is None:
                 with open("config.yaml") as file:
@@ -116,6 +116,9 @@ class Estimator:
         """
 
         self.model = load_model(model_path)
+
+    def q_loss_np(self, y_true, y_pred) -> np.ndarray:
+        return np.maximum(y_true, y_pred) / np.minimum(y_true, y_pred)
 
     def load_data_file(self, file_path: str, override: bool = False) -> Dict[str, np.ndarray]:
         """
@@ -197,15 +200,15 @@ class Estimator:
 
         self.training_data["x"] = self.data["x"][sample]
         self.training_data["y"] = self.data["y"][sample]
-        if "postgres_estimate" in self.data and self.data["postgres_estimate"]:
+        if "postgres_estimate" in self.data and self.data["postgres_estimate"] is not None:
             self.training_data["postgres_estimate"] = self.data["postgres_estimate"][sample]
 
         self.test_data["x"] = self.data["x"][not_sample]
         self.test_data["y"] = self.data["y"][not_sample]
-        if "postgres_estimate" in self.data and self.data["postgres_estimate"]:
+        if "postgres_estimate" in self.data and self.data["postgres_estimate"] is not None:
             self.test_data["postgres_estimate"] = self.data["postgres_estimate"][not_sample]
 
-    def train(self, epochs: int = 100, verbose: int = 0, shuffle: bool = True, batch_size: int = 32,
+    def train(self, epochs: int = 100, verbose: int = 1, shuffle: bool = True, batch_size: int = 32,
               validation_split: float = 0.1) -> Union[History, History]:
         """
         Method for training the before created Model.
@@ -261,7 +264,7 @@ class Estimator:
 
         return self.model.predict(data).flatten()
 
-    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 0, shuffle: bool = True,
+    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 1, shuffle: bool = True,
             batch_size: int = 32, validation_split: float = 0.1, override_model: bool = False) -> np.ndarray:
         """
         Method for a full run of the Estimator, with training and testing.
