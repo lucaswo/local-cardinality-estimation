@@ -1,10 +1,22 @@
+import os.path
+from enum import Enum
 from typing import List, Tuple, Dict
 
 import psycopg2 as postgres
 import yaml
 from sklearn.preprocessing import LabelEncoder
 
-import os.path
+
+class CreationMode(Enum):
+    """
+    Enum for the different possibilities to use the MetaCollector.
+
+    0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
+    """
+
+    NONE = 0
+    TEMPORARY = 1
+    PERMANENT = 2
 
 
 class MetaCollector:
@@ -90,7 +102,8 @@ class MetaCollector:
             self.conn.close()
 
     def setup_view(self, table_names: List[str or Tuple[str, str]], columns: List[str],
-                   join_atts: List[str or Tuple[str, str]] = None, cube: bool = False, mode: int = 0) -> (
+                   join_atts: List[str or Tuple[str, str]] = None, cube: bool = False,
+                   mode: CreationMode = CreationMode.NONE) -> (
             List[Tuple[str, str]], int):
         """
         Create the tables tmpview and if cube==True also tmpview_cube containing the metadata for the given tables
@@ -103,7 +116,7 @@ class MetaCollector:
             join the tables on. -> is optional, because there is no join if there is only one table and so there would
             be no join-attribute needed in that case
         :param cube: boolean whether to create the *_cube table, too
-        :param mode: 0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
+        :param mode: see CreationMode-Enum
         :return: first: a list of tuples containing the name and the datatype for the columns, each as string
             second: the maximal cardinality as integer
         """
@@ -112,7 +125,7 @@ class MetaCollector:
             raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
                                   "'open_database_connection' before this method.")
 
-        if mode == 1:
+        if mode == CreationMode.TEMPORARY:
             # drops maybe already existing tables with metadata
             sql = """DROP TABLE IF EXISTS tmpview; DROP TABLE IF EXISTS tmpview_cube;"""
             self.execute_sql(sql)
@@ -162,13 +175,13 @@ class MetaCollector:
                 attributes_string = " AND ".join(["t{}.{} = t{}.{}".format(1, join[0], i + 2, join[1]) for i, join in
                                                   enumerate(join_atts)])
 
-            if mode == 0:
+            if mode == CreationMode.NONE:
                 sql = """ SELECT COUNT(*) FROM {} WHERE {} """.format(tables_string, attributes_string)
-            elif mode == 1:
+            elif mode == CreationMode.TEMPORARY:
                 new_table_name = "tmpview"
                 sql = """CREATE TABLE {} AS (SELECT {} FROM {} WHERE {});""".format(new_table_name, columns_string,
                                                                                     tables_string, attributes_string)
-            elif mode == 2:
+            elif mode == CreationMode.PERMANENT:
                 new_table_name = "tmpview_{}".format("_".join(table[0] for table in table_names))
                 sql = """CREATE TABLE IF NOT EXISTS {} AS (SELECT {} FROM {} WHERE {});""".format(new_table_name,
                                                                                                   columns_string,
@@ -180,20 +193,20 @@ class MetaCollector:
             columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[2]
                                        else "{col}".format(col=col[0]) for col in columns_types])
 
-            if mode == 0:
+            if mode == CreationMode.NONE:
                 sql = """ SELECT COUNT(*) FROM {} """.format(table_names[0])
-            elif mode == 1:
+            elif mode == CreationMode.TEMPORARY:
                 new_table_name = "tmpview"
                 sql = """CREATE TABLE {} AS (SELECT {} FROM {});""".format(new_table_name, columns_string,
                                                                            table_names[0])
-            elif mode == 2:
+            elif mode == CreationMode.PERMANENT:
                 new_table_name = "tmpview_{}".format(table_names[0])
                 sql = """CREATE TABLE IF NOT EXISTS {} AS (SELECT {} FROM {});""".format(new_table_name, columns_string,
                                                                                          table_names[0])
             else:
                 raise ValueError("Invalid mode selected. There are only 0, 1 or 2 as modes available!")
 
-        if mode == 1 or mode == 2:
+        if mode == CreationMode.TEMPORARY or mode == CreationMode.PERMANENT:
             # self.execute_sql(sql)
             # sql = """ANALYZE {};""".format(new_table_name)
             self.execute_sql(sql)
