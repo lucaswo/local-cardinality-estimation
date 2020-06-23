@@ -78,7 +78,7 @@ class Vectorizer:
             querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
 
             n_total_columns = len(min_max_step)
-            vector = np.zeros(n_total_columns * self.n_max_expressions + 3) # constant 3 for estimated_cardinality, true_cardinality and querySetID
+            vector = np.zeros(n_total_columns * self.n_max_expressions + 2) # constant 2 for estimated_cardinality, true_cardinality
 
             # vectorize query
             for idx, query in enumerate(query): # requires sorted predicates
