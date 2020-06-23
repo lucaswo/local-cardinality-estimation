@@ -6,4 +6,4 @@ def vectorize(queries_with_cardinalities_csv_path : str, output_folder_path : st
     vectorizer.vectorize()
     vectorizer.save(output_folder_path, filename)
 
-vectorize("assets/queries_with_cardinalities.csv", "/mnt/data/programming/tmp/", "main_py_test")
+vectorize("assets/queries_with_cardinalities.csv", "assets/", "main_py_test")
