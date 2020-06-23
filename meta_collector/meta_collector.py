@@ -294,7 +294,7 @@ class MetaCollector:
 
     def get_meta(self, table_names: List[str or Tuple[str, str]], columns: List[str],
                  join_atts: List[str or Tuple[str, str]] = None, save: bool = True, save_file_name: str = None,
-                 batchmode: bool = False, mode: int = 0) -> Dict:
+                 batchmode: bool = False, mode: CreationMode = CreationMode.NONE) -> Dict:
         """
         Method for the whole process of collecting the meta-information for the given tables joined on the given
         attributes and projected on the given columns.
@@ -309,7 +309,7 @@ class MetaCollector:
         :param save_file_name: name for the save-file for the meta_information -> not needed if save==False
         :param batchmode: whether the meta data is collected in batches or not -> connection to db held open if batch
             mode
-        :param mode: 0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
+        :param mode: see CreationMode-Enum
         :return: dictionary containing the meta-information
         """
 
@@ -344,8 +344,8 @@ class MetaCollector:
 
         return result_dict
 
-    def get_meta_from_file(self, file_path: str, save: bool = True, save_file_name: str = None, mode: int = 0,
-                           override: bool = True) -> Dict[int, any]:
+    def get_meta_from_file(self, file_path: str, save: bool = True, save_file_name: str = None,
+                           mode: CreationMode = CreationMode.NONE, override: bool = True) -> Dict[int, any]:
         """
         Method for collecting meta data for the information given in a file from Crawler or at least a file formatted
         like this.
@@ -353,7 +353,7 @@ class MetaCollector:
         :param file_path: Path to the file. Format has to be the same like the output of Crawler
         :param save: Whether to save the information to file or not. -> It is recommended to do so.
         :param save_file_name: Optional name for the file.
-        :param mode: 0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
+        :param mode: see CreationMode-Enum
         :param override: Whether to override an already existing meta_information file.
         :return: The solution dict.
         """
