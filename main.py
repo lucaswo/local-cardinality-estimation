@@ -1,6 +1,7 @@
 from crawler import Crawler
+from database_connector import DatabaseConnector
 from estimator import Estimator
-from meta_collector import MetaCollector
+from meta_collector import MetaCollector, Database
 from vectorizer import Vectorizer
 
 
@@ -10,8 +11,11 @@ def crawl(file_path: str, save_file_path: str):
 
 
 def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
-    mc = MetaCollector(config_file_path=config_file_path)
+    db_conn = DatabaseConnector()
+    db_conn.connect(database=Database.MARIADB, config_file_path=config_file_path)
+    mc = MetaCollector(db_conn)
     mc.get_meta_from_file(file_path=file_path, save_file_path=save_file_path)
+    db_conn.close_database_connection()
 
 
 def vectorize(queries_with_cardinalities_csv_path: str, output_folder_path: str, filename: str):
