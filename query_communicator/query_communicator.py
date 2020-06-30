@@ -38,12 +38,8 @@ class QueryCommunicator():
         print("generate ", self.query_number, " queries")
         generator.generate_queries(qnumber=self.query_number, save_readable='../assets/null_including_queries.sql')
 
-        with open('postgres_evaluator/config.yaml', 'r') as c:
-            config = yaml.safe_load(c)
-
-        evaluator = PostgresEvaluator(config=config)
+        evaluator = PostgresEvaluator()
         evaluator.get_cardinalities()
-
 
     def get_nullfree_queries(self, outputfile: str = '../assets/reduced_queries_with_cardinalities.csv'):
         '''
@@ -58,11 +54,8 @@ class QueryCommunicator():
 
         generator = SQLGenarator(config=self.meta)
         generator.generate_queries(qnumber=generate, save_readable='../assets/nullfree_queries.sql')
-        # TODO: change code in PG Evaluator, that a config file can be chosen, instead of loading a config file and giving the dict to the Evaluator
-        with open('postgres_evaluator/config.yaml','r') as c:
-            config = yaml.safe_load(c)
 
-        evaluator = PostgresEvaluator(config=config)
+        evaluator = PostgresEvaluator()
         evaluator.get_cardinalities()
         reduced_queries = self.reduce_queries()
 

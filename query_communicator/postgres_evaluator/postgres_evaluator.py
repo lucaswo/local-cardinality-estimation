@@ -21,7 +21,7 @@ class PostgresEvaluator:
 
     debug: bool = None
 
-    def __init__(self, config: dict = None, debug: bool = True, input_file_name: str = 'queries.csv'):
+    def __init__(self, config_path: str = 'postgres_evaluator/config.yaml', debug: bool = True, input_file_name: str = 'queries.csv'):
         """
         Initializer for the PostgresEvaluator
 
@@ -36,9 +36,9 @@ class PostgresEvaluator:
         :param input_file_name: name of the file used for the sql query import, have to be .csv or .sql and located in the asset folder
         """
 
-        if config is None:
-            with open("config.yaml") as file:
-                config = yaml.safe_load(file)
+        config: dict = None
+        with open(config_path, 'r') as c:
+            config = yaml.safe_load(c)
 
         if config["db_name"] is None or config["db_name"] == "":
             raise ValueError("Value for db_name is needed! You can provide it with the config dict or in config.yaml!")
