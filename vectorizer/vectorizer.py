@@ -23,15 +23,14 @@ class Vectorizer:
             "IS": [0,0,1]
     }
 
-    def __init__(self, n_max_expressions: int):
+    def __init__(self):
         """
         Intitialises the Vectorizer object by defining available operators and maximum numbers of expressions allowed within a query. Returns the obejct.
-        
-        :param n_max_expressions maximal number of expression allowed to process to conform with the fixed vector length used for each predictor model.
         """
 
-        self.n_max_expressions = n_max_expressions
+        self.n_max_expressions = 0 # will be automatically determined
         self.operator_code_length = len(next(iter(Vectorizer.operators.values())))
+        self.querySetID_predicates = {}
         self.vectorization_tasks = [] # may become a SimpleQueue in case of multithreading
         self.vectorization_results = []
 
@@ -50,12 +49,23 @@ class Vectorizer:
             for querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality in reader:
                 
                 expressions = query.split("WHERE", maxsplit=1)[1].split("AND")
-                join_matcher = re.compile(r'.+\..*id\s*=\s*.+\..*id\s*')
+                # Matches join statements as where clausel in a general manner. 
+                # E.g.: a=b a=abc is matched as join statement, but a="b" a='b' a=9 not (for all numbers and letters respectivley)
+                join_matcher = re.compile(r'.+\s*=\s*[^"\'\d]\D*')
                 expressions = [expr for expr in expressions if not join_matcher.match(expr)]
-                assert self.n_max_expressions > len(expressions), f"Too many expressions concatinated by 'AND' in query! {query}"
 
+                
                 query_parsed = [self.__parse_expression(expression) for expression in expressions]
+                query_parsed.sort(key=lambda x : x[0])
+                
+                # TODO: each querySetID needs such a "n_max_expressions", since its now automatically determined
+                if len(query_parsed) > self.n_max_expressions:
+                    self.n_max_expressions = len(query_parsed)
+                
+                # TODO: calculate this only for each querySetID once
+                self.querySetID_predicates[querySetID] = [x[0] for x in query_parsed]
 
+                
                 self.vectorization_tasks.append((
                     int(querySetID),
                     query_parsed,
@@ -65,6 +75,7 @@ class Vectorizer:
                     int(estimated_cardinality),
                     int(true_cardinality)
                     ))
+        print(self.n_max_expressions)
 
 
     def vectorize(self) -> List[np.array]:
@@ -78,7 +89,7 @@ class Vectorizer:
             querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
 
             n_total_columns = len(min_max_step)
-            vector = np.zeros(n_total_columns * self.n_max_expressions + 2) # constant 2 for estimated_cardinality, true_cardinality
+            vector = np.zeros(n_total_columns * self.n_max_expressions + 3) # constant 3 for max_cardinality, estimated_cardinality, true_cardinality
 
             # vectorize query
             for idx, query in enumerate(query): # requires sorted predicates
@@ -89,7 +100,8 @@ class Vectorizer:
                 vector[idx*self.n_max_expressions:end_idx] = Vectorizer.operators[operator]
                 vector[end_idx] = value_normalzed
                 
-            # normalize cardinalities
+            # normalize/set cardinality information
+            vector[-3] = max_card
             vector[-2] = self.__min_max_normalize(estimated_cardinality, max_card)
             vector[-1] = self.__min_max_normalize(true_cardinality, max_card)
 
@@ -117,7 +129,7 @@ class Vectorizer:
         return predicate.strip(), operator.strip(), int(value)
 
 
-    def __normalize(self, predicate: str, min_max_steps: Dict[str, Tuple[int, int, int]], encodings: Dict[int, str], value: int) -> float:
+    def __normalize(self, predicate: str, min_max_steps: List[Tuple[int, int, int]], encodings: List[Dict[int, str]], value: int) -> float:
         """
         Normalizes the value according to min-max statistics of the given predicate. If an encoding is avaiable for the predicate it is used.
         Normalization will result in value of range (0,1].
@@ -128,8 +140,6 @@ class Vectorizer:
         :param value: the value to be normalized
         :return: the normalized value
         """
-        if '.' in predicate: 
-            predicate = predicate.split('.')[1]
         min_val, max_val, step = min_max_steps[predicate]
         if predicate in encodings.keys():
             value = encodings[predicate].transform([int(value)])[0]
@@ -152,16 +162,19 @@ class Vectorizer:
         value = np.log(value)
         return float(value - min_value)/(max_value - min_value)
 
-    def save(self, path: str, filename : str):
+    def save(self, path: str, filetypes : str): #TODO
         """
         Stores the SQL query and corresponding vector at given path as NPY and TXT file.
 
         :param path: path to a directory for saving
-        :param filename: filename without extension e.g. "queries_with_cardinalites_vectors"
+        :param filetypes: string of file types must contain "csv" or "npy"
         """
-
-        np.save(os.path.join(path, f"{filename}.npy"), np.array(self.vectorization_results) )
-        np.savetxt( os.path.join(path, f"{filename}.csv"), np.array(self.vectorization_results), delimiter=',', fmt="%.18g", header="querySetID, [vector], estimated_cardinality, true cardinality")
+        
+        assert "npy" not in filetypes and  "csv" not in filetypes, "Valid file extention must be given. filetypes argument must contain 'csv' and/or 'npy'"
+        if "npy" in filetypes: 
+            np.save(f"{path}.npy", np.array(self.vectorization_results))
+        if "csv" in filetypes:
+            np.savetxt(f"{path}.csv", np.array(self.vectorization_results), delimiter=',', fmt="%.18g")
 
 def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]) -> np.array:
     """
@@ -187,22 +200,26 @@ def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]
         "IS": [0,0,1]
     }
     
-    join_matcher = re.compile(r'.+\..*id\s*=\s*.+\..*id\s*')
+    # not quite the original anymore due to query file adaptions
+    join_matcher = re.compile(r'.+\s*=\s*[^"\'\d]\D*')
+    exps = []
     for exp in predicates.split("AND"):
         exp = exp.strip()
         if join_matcher.match(exp):
             continue
+        exps.append(exp)
+    exps.sort()
+
+    for i, exp in enumerate(exps):
         pred, op, value = exp.split(" ")
-        if '.' in pred: 
-            pred = pred.split('.')[1]
-        if pred in encoders.keys():
-            #value = encoders[pred].transform([value.replace("'", "")])[0]
-            value = encoders[pred].transform([int(value)])[0]
-        else:
-            value = max(min_max[pred][0], float(value))
-        idx = list(min_max.keys()).index(pred)
-        vector[idx*4:idx*4+3] = operators[op]
-        vector[idx*4+3] = (value-min_max[pred][0]+min_max[pred][2])/                           (min_max[pred][1]-min_max[pred][0]+min_max[pred][2])
+        # FIXME Ignore encoders...
+        # if pred in encoders.keys(): 
+        #     #value = encoders[pred].transform([value.replace("'", "")])[0]
+        #     value = encoders[pred].transform([int(value)])[0]
+        # else:
+        value = max(min_max[i][0], float(value))
+        vector[i*4:i*4+3] = operators[op]
+        vector[i*4+3] = (value-min_max[i][0]+min_max[i][2]) / (min_max[i][1]-min_max[i][0]+min_max[i][2])
     return vector
 
 def vectorizer_tests():
@@ -225,9 +242,10 @@ def vectorizer_tests():
             "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id != 1 AND mk.keyword_id < 19712 AND t.production_year < 1980;", 
             "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id > 1 AND mk.keyword_id <= 186471 AND t.production_year < 2110;"]
         )
-    min_max_step = ({'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}, 
-                    {'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]})
-    encoders = {}
+    # alphabetically sorted
+    min_max_step = ([[1, 2, 1], [1, 113, 1], [1878, 2115, 1]], 
+                    [[1, 2, 1], [1, 236627, 1], [1878, 2115, 1]])
+    encoders = [{}]
 
     # original implementation copy-pasted test
     original_vectors = []
@@ -237,9 +255,12 @@ def vectorizer_tests():
     original_vectors = np.array(original_vectors)
 
     # small vectorization test
-    vectorizer = Vectorizer(4)
+    vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities("assets/queries_with_cardinalities.csv")
     vectorizer_vectors = np.array(vectorizer.vectorize())
+    print(vectorizer_vectors[0,1:-3], len(vectorizer_vectors[0,1:-3]))
+    print(original_vectors[0], len(original_vectors[0]))
+
     assert np.allclose(vectorizer_vectors[:,1:-3], original_vectors),  f"{vectorizer_vectors[:,1:-3]} not close \n{original_vectors}"
     #vector_vectorizer, card_est, card_norm = vec[:-2], vec[-2], vec[-1]
     #assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
