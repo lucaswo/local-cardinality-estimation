@@ -23,9 +23,11 @@ class DatabaseConnector:
     conn = None
     cur = None
 
+    database = None
+
     debug: bool = None
 
-    def __init__(self, debug: bool = True):
+    def __init__(self, database: Database, debug: bool = True):
         """
         Initializer for the DatabaseConnector
 
@@ -33,23 +35,24 @@ class DatabaseConnector:
         """
 
         self.debug = debug
+        self.database = database
 
-    def connect(self, database: Database, config: Dict = None, config_file_path: str = None,
+    def connect(self, config: Dict = None, config_file_path: str = None,
                 sqlite_file_path: str = None):
 
         if (config is None and config_file_path is None and (
-                database == Database.POSTGRES or database == Database.MARIADB)) or (
-                sqlite_file_path is None and database == Database.SQLITE):
+                self.database == Database.POSTGRES or self.database == Database.MARIADB)) or (
+                sqlite_file_path is None and self.database == Database.SQLITE):
             raise ValueError("Please read the documentation. You need to give either config or config_file_path or "
                              "sqlite_file_path!")
 
-        if database == Database.NONE:
+        if self.database == Database.NONE:
             raise ValueError("Database must not be NONE!")
-        elif database == Database.POSTGRES:
+        elif self.database == Database.POSTGRES:
             self.connect_to_postgres(config=config, config_file_path=config_file_path)
-        elif database == Database.SQLITE:
+        elif self.database == Database.SQLITE:
             self.connect_to_sqlite(database_file_path=sqlite_file_path)
-        elif database == Database.MARIADB:
+        elif self.database == Database.MARIADB:
             self.connect_to_mariadb(config=config, config_file_path=config_file_path)
 
     def connect_to_postgres(self, config: Dict = None, config_file_path: str = "config.yaml"):
@@ -175,3 +178,17 @@ class DatabaseConnector:
         if self.debug:
             print("Executing: {}".format(sql_string))
         self.cur.execute(sql_string)
+
+    def fetchall(self):
+        if not self.cur:
+            raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
+                                  "'open_database_connection' before this method.")
+
+        return self.cur.fetchall()
+
+    def fetchone(self):
+        if not self.cur:
+            raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
+                                  "'open_database_connection' before this method.")
+
+        return self.cur.fetchone()

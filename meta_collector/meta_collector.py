@@ -1,3 +1,4 @@
+import argparse
 import os.path
 from enum import Enum
 from typing import List, Tuple, Dict
@@ -5,8 +6,7 @@ from typing import List, Tuple, Dict
 import yaml
 from sklearn.preprocessing import LabelEncoder
 
-from database_connector import DatabaseConnector
-from database_connector.database_connector import Database
+from database_connector import Database, DatabaseConnector
 
 
 class CreationMode(Enum):
@@ -27,7 +27,6 @@ class MetaCollector:
     """
 
     db_conn = None
-    cur = None
 
     debug: bool = None
 
@@ -40,7 +39,6 @@ class MetaCollector:
         """
 
         self.db_conn = database_connector
-        self.cur = database_connector.cur
 
         self.debug = debug
 
@@ -76,9 +74,10 @@ class MetaCollector:
             self.db_conn.execute(sql)
 
             # get all remaining rows from the result set
-            column_type = self.cur.fetchall()
+            column_type = self.db_conn.fetchall()
 
             for index, column in enumerate(column_type):
+                if column[1] == "int": column = (column[0], "integer")
                 if isinstance(table_name, list) or isinstance(table_name, tuple):
                     min_max_step, encoders = self.collect_min_max_step(table_name[0], (column[0], column[1]))
                     columns_types.append((column[0], table_name[1], column[1], min_max_step, encoders,
@@ -94,6 +93,40 @@ class MetaCollector:
 
         return columns_types
 
+    def get_columns_data_sqlite(self, table_names: List[str or Tuple[str, str]], columns: List[str]) -> \
+            List[Tuple[str, str, str, Tuple[int, int, int], Dict[str, LabelEncoder], str]]:
+
+        columns_types = []
+        already_seen = []
+
+        for table_name in table_names:
+            if isinstance(table_name, list) or isinstance(table_name, tuple):
+                tablename = table_name[0]
+            else:
+                tablename = table_name
+
+            sql = """ PRAGMA table_info("{}") """.format(tablename)
+
+            self.db_conn.execute(sql)
+
+            # get all remaining rows from the result set
+            column_type = self.db_conn.fetchall()
+
+            for index, column in enumerate(column_type):
+                column = (column[1], column[2].lower())
+                if table_name[1] + "." + column[0] in columns or column[0] in columns:
+                    min_max_step, encoders = self.collect_min_max_step(tablename, (column[0], column[1]))
+                    if isinstance(table_name, list) or isinstance(table_name, tuple):
+                        columns_types.append((column[0], table_name[1], column[1], min_max_step, encoders,
+                                              "" if column[0] not in already_seen else "_".join(
+                                                  [table_name[1], column[0]])))
+                    else:
+                        columns_types.append((column[0], table_name, column[1], min_max_step, encoders,
+                                              "" if column[0] not in already_seen else "_".join(
+                                                  [table_name, column[0]])))
+
+        return columns_types
+
     def collect_min_max_step(self, tablename: str, column: Tuple[str, str]) -> (Tuple[int, int, int], Dict):
         """
         After collecting the datatype information for the columns this function returns the min and max values for the
@@ -106,33 +139,30 @@ class MetaCollector:
             second: a dictionary of the not integer encoders with key attribute-name and value the encoder
         """
 
-        if not self.cur:
-            raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
-                                  "'open_database_connection' before this method.")
-
         encoders = {}
 
-        if column[1] != "integer" and column[1] != "int":
+        if column[1].lower() == "integer" or column[1].lower() == "int":
+            sql = """SELECT MIN({col}) AS min, MAX({col}) AS max FROM {tab}""".format(col=column[0], tab=tablename)
+
+            self.db_conn.execute(sql)
+            tmp = self.db_conn.fetchone()
+
+            return (tmp[0], tmp[1], 1), encoders
+        else:
             sql = """SELECT {col}, count(*) from {tab} GROUP BY {col};""".format(col=column[0], tab=tablename)
 
             self.db_conn.execute(sql)
-            tmp = self.cur.fetchall()
+            tmp = self.db_conn.fetchall()
 
             cats = [x[0] for x in tmp if x[0] is not None]
 
             le = LabelEncoder()
             cats = le.fit_transform(sorted(cats))
 
-            encoders[column[0]] = le
+            for index in cats:
+                encoders[str(le.classes_[index])] = index.item()
 
-            return (min(cats), max(cats), 1), encoders
-        else:
-            sql = """SELECT MIN({col}) AS min, MAX({col}) AS max FROM {tab}""".format(col=column[0], tab=tablename)
-
-            self.db_conn.execute(sql)
-            tmp = self.cur.fetchall()
-
-            return (tmp[0][0], tmp[0][1], 1), encoders
+            return (min(cats).item(), max(cats).item(), 1), encoders
 
     def get_max_card(self, table_names: List[str or Tuple[str, str]], join_atts: List[str or Tuple[str, str]]) -> int:
 
@@ -151,7 +181,7 @@ class MetaCollector:
 
         self.db_conn.execute(sql)
 
-        return self.cur.fetchall()[0]
+        return self.db_conn.fetchone()[0]
 
     def setup_view(self, table_names: List[str or Tuple[str, str]], columns_types: List[Tuple],
                    join_atts: List[str or Tuple[str, str]] = None, cube: bool = False,
@@ -172,10 +202,6 @@ class MetaCollector:
             second: the maximal cardinality as integer
         """
 
-        if not self.cur:
-            raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
-                                  "'open_database_connection' before this method.")
-
         if mode == CreationMode.TEMPORARY:
             new_table_name = "tmpview"
         elif mode == CreationMode.PERMANENT:
@@ -186,7 +212,9 @@ class MetaCollector:
 
         if mode == CreationMode.TEMPORARY:
             # drops maybe already existing tables with metadata
-            sql = """DROP TABLE IF EXISTS {tab}; DROP TABLE IF EXISTS {tab}_cube;""".format(tab=new_table_name)
+            sql = """DROP TABLE IF EXISTS {tab};""".format(tab=new_table_name)
+            self.db_conn.execute(sql)
+            sql = """DROP TABLE IF EXISTS {tab}_cube;""".format(tab=new_table_name)
             self.db_conn.execute(sql)
 
         columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[2]
@@ -196,45 +224,48 @@ class MetaCollector:
             if isinstance(table_names[0], list) or isinstance(table_names[0], tuple):
                 tables_string = ",".join(["{} {}".format(tab[0], tab[1]) for tab in table_names])
             else:
-                tables_string = ",".join(["{} t{}".format(tab, i + 1) for i, tab in enumerate(table_names)])
+                tables_string = ",".join(["{}".format(tab) for tab in table_names])
 
-            sql = """CREATE TABLE IF NOT EXISTS {} AS (SELECT {} FROM {} WHERE {});""".format(new_table_name,
-                                                                                              columns_string,
-                                                                                              tables_string,
-                                                                                              attributes_string)
+            sql = """CREATE TABLE IF NOT EXISTS {} AS SELECT {} FROM {} WHERE {};""".format(new_table_name,
+                                                                                            columns_string,
+                                                                                            tables_string,
+                                                                                            attributes_string)
         else:
-            sql = """CREATE TABLE IF NOT EXISTS {} AS (SELECT {} FROM {});""".format(new_table_name, columns_string,
-                                                                                     table_names[0])
+            sql = """CREATE TABLE IF NOT EXISTS {} AS SELECT {} FROM {};""".format(new_table_name, columns_string,
+                                                                                   table_names[0])
 
         if mode == CreationMode.TEMPORARY or mode == CreationMode.PERMANENT:
-            self.db_conn.execute(sql)
-            sql = """ANALYZE {};""".format(new_table_name)
+            # self.db_conn.execute(sql)
+            # sql = """ANALYZE {};""".format(new_table_name)
             self.db_conn.execute(sql)
             sql = """SELECT count(*) FROM {};""".format(new_table_name)
 
         self.db_conn.execute(sql)
 
         # get the count of tuples in the tmpview
-        max_card = self.cur.fetchall()[0]
+        max_card = self.db_conn.fetchone()[0]
 
         if cube:
-            sql = """CREATE TABLE {tab}_cube AS (SELECT {col}, count(*)::integer, 0.0 as perc FROM {tab}
-                GROUP BY GROUPING SETS(({col})));
-                UPDATE tmpview_cube SET perc = count/(SELECT SUM(count) FROM tmpview_cube);""".format(
-                tab=new_table_name, col=",".join(column.split(".")[-1] for column in columns))
-            if self.debug:
-                print("Executing: {}".format(sql))
-            self.cur.execute(sql)
+            self.setup_cube_view(new_table_name=new_table_name, columns=columns_types)
 
-            sql = """ANALYZE {}_cube;""".format(new_table_name)
+        return max_card
 
-            if self.debug:
-                print("Executing: {}".format(sql))
-            self.cur.execute(sql)
+    def setup_cube_view(self, new_table_name: str, columns):
+        sql = """CREATE TABLE {tab}_cube AS (SELECT {col}, count(*)::integer, 0.0 as perc FROM {tab}
+                        GROUP BY GROUPING SETS(({col})));
+                        UPDATE tmpview_cube SET perc = count/(SELECT SUM(count) FROM tmpview_cube);""".format(
+            tab=new_table_name, col=",".join(column[0].split(".")[-1] for column in columns))
 
-        return columns_types, max_card
+        self.db_conn.execute(sql)
 
-    def eliminate_duplicates(self, columns: List[str]) -> List[str]:
+        # sql = """ANALYZE {}_cube;""".format(new_table_name)
+        #
+        # if self.debug:
+        #     print("Executing: {}".format(sql))
+        # self.db_conn.execute(sql)
+
+    @staticmethod
+    def eliminate_duplicates(columns: List[str]) -> List[str]:
         """
         This method is responsible for solving the problem of column-names existing at least double. Therefore it adds
         an alias which is build from the table-alias _ column-name.
@@ -274,7 +305,12 @@ class MetaCollector:
         :return: dictionary containing the meta-information
         """
 
-        columns_data = self.get_columns_data(table_names=table_names, columns=columns)
+        if self.db_conn.database == Database.POSTGRES or self.db_conn.database == Database.MARIADB:
+            columns_data = self.get_columns_data(table_names=table_names, columns=columns)
+        elif self.db_conn.database == Database.SQLITE:
+            columns_data = self.get_columns_data_sqlite(table_names=table_names, columns=columns)
+        else:
+            raise ValueError("Invlid Database Connection!")
 
         print(columns_data)
 
@@ -285,12 +321,12 @@ class MetaCollector:
         else:
             raise ValueError("Invalid CreationMode selected!")
 
-        already_seen = []
-        for index, col in enumerate(columns_data):
-            if col[0] not in already_seen:
-                already_seen.append(col[0])
-            else:
-                columns_data[index] = (col[0], col[1], col[2], col[3], col[4], "_".join([col[1], col[0]]))
+        # already_seen = []
+        # for index, col in enumerate(columns_data):
+        #     if col[0] not in already_seen:
+        #         already_seen.append(col[0])
+        #     else:
+        #         columns_data[index] = (col[0], col[1], col[2], col[3], col[4], "_".join([col[1], col[0]]))
 
         result_dict = {"table_names": table_names,
                        "columns": columns_data,
@@ -365,12 +401,36 @@ class MetaCollector:
             yaml.safe_dump(meta_dict, file)
 
 
-# TODO: correct docu
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("-s", "--save", action="store_true", help="Whether to save the results.", default=True)
+#     parser.add_argument("-o", "--override", action="store_true", help="Whether to override already existing results.",
+#                         default=True)
+#     parser.add_argument("-m", "--mode", type=int, help="The creation mode. 0-> None; 1-> Temporary; 2-> Permanent",
+#                         default=0)
+#     parser.add_argument("--file_path", type=str, help="The path for the file containing the join information.")
+#     parser.add_argument("--save_file_path", type=str, help="The path for the file where the results should be saved.")
+#
+#     args = parser.parse_args()
+#
+#     db_conn = DatabaseConnector()
+#     db_conn.connect(database=Database.MARIADB, config_file_path="config_mariadb.yaml")
+#     mc = MetaCollector(db_conn)
+#     mc.get_meta_from_file(file_path=args.file_path, save=args.save, save_file_path=args.save_file_path, mode=args.mode,
+#                           override=args.override)
+#     db_conn.close_database_connection()
 
-db_conn = DatabaseConnector()
-db_conn.connect(database=Database.MARIADB, config_file_path="config_mariadb.yaml")
+# TODO: correct docu, optional: find a way to make the commandline version work
+
+# db_conn = DatabaseConnector(database=Database.SQLITE)
+# db_conn.connect(sqlite_file_path="E:/imdb.db")
+db_conn = DatabaseConnector(database=Database.MARIADB)
+db_conn.connect(config_file_path="config_mariadb.yaml")
+# db_conn = DatabaseConnector(database=Database.POSTGRES)
+# db_conn.connect(config_file_path="config_postgres.yaml")
 mc = MetaCollector(db_conn)
 mc.get_meta(["movie_companies", "movie_info_idx", "title"], ["production_year", "info_type_id", "company_type_id"],
-            ["id=movie_id", "id=movie_id"], mode=CreationMode.PERMANENT)
+            ["title.id=movie_companies.movie_id", "title.id=movie_info_idx.movie_id"], mode=CreationMode.TEMPORARY)
 # mc.get_meta_from_file(file_path="../assets/solution_dict.yaml")
+# mc.get_meta(["title"], ["imdb_index"])
 db_conn.close_database_connection()
