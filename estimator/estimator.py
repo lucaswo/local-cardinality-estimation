@@ -1,8 +1,7 @@
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, Union
 
 import numpy as np
 import yaml
-from keras import backend as K
 from keras.callbacks import History
 from keras.layers import Dense, Input, Dropout
 from keras.models import Model, load_model
@@ -15,7 +14,6 @@ class Estimator:
     changed in 'config.yaml'.
     """
 
-    max_card: float = None
     input_length: int = None
 
     config: Dict = None
@@ -25,8 +23,8 @@ class Estimator:
 
     model: Model = None
 
-    def __init__(self, config: Dict[str, Any] = None, data: Dict[str, np.ndarray] = None, model: Model = None,
-                 model_path: str = None, debug: bool = True):
+    def __init__(self, config: Dict[str, Any] = None, config_file_path: str = "config.yaml",
+                 data: Dict[str, np.ndarray] = None, model: Model = None, model_path: str = None, debug: bool = True):
         """
         Initializer for the Estimator.
 
@@ -38,10 +36,11 @@ class Estimator:
             if given: It must contain at least the fields "loss_function", "dropout", "learning_rate",
             "kernel_initializer", "activation_strategy" and "layer".
             if not given: the config file 'config.yaml' is used for these settings.
+        :param config_file_path: path for the config-file -> only necessary if no config is given
         :param data: Optional parameter for giving the data for training and testing. If given it has to be a Dict with
             at least "x" and "y" and optionally "postgres_estimate" as keys. The values have to be numpy.ndarray. For
             key "x" it should be the vectorized queries, for key "y" the true cardinalities in the same order and for
-            optional key "postgres_estimate" the estimation of the postgres optimizer for the query.
+            optional key "postgres_estimate" the estimates of the postgres optimizer for the query.
         :param model: Option to pass a Model which can be used.
         :param model_path: Option to pass a path to a saved model in an .h5 file.
         :param debug: Boolean whether to print additional information while processing.
@@ -50,10 +49,10 @@ class Estimator:
         if model:
             self.model = model
         elif model_path:
-            self.model = load_model(model_path)
+            self.load_model(model_path)
         else:
             if config is None:
-                with open("config.yaml") as file:
+                with open(config_file_path) as file:
                     config = yaml.safe_load(file)
 
             conf_keys = ["loss_function", "dropout", "learning_rate", "kernel_initializer", "activation_strategy"]
@@ -110,51 +109,16 @@ class Estimator:
 
         return self.model
 
-    @staticmethod
-    def denormalize(y, y_min: float, y_max: float):
+    def load_model(self, model_path: str):
         """
-        :param y: tensor filled with values to denormalize
-        :param y_min: minimum value for y
-        :param y_max: maximum value for y
-        :return: tensor with denormalized values
+        Method for loading an already existing model wich was saved to file.
+
+        :param model_path: Path to the file containing the model to load
         """
 
-        return K.exp(y * (y_max - y_min) + y_min)
-
-    @staticmethod
-    def denormalize_np(y: np.ndarray, y_min: float, y_max: float) -> np.ndarray:
-        """
-        :param y: numpy-array filled with values to denormalize
-        :param y_min: minimum value for y
-        :param y_max: maximum value for y
-        :return: numpy-array with denormalized values
-        """
-
-        return np.exp(y * (y_max - y_min) + y_min)
-
-    @staticmethod
-    def normalize(y: np.ndarray) -> np.ndarray:
-        """
-        :param y: numpy-array with unnormalized values
-        :return: numpy-array with normalized values
-        """
-
-        y = np.log(y)
-        # if self.max_card is not None:
-        #     return (y - 0) / (self.max_card - 0)
-        # else:
-        return (y - min(y)) / (max(y) - min(y))
-
-    def q_loss(self, y_true, y_pred):
-        y_true = self.denormalize(y_true, 0, self.max_card)
-        y_pred = self.denormalize(y_pred, 0, self.max_card)
-
-        return K.maximum(y_true, y_pred) / K.minimum(y_true, y_pred)
+        self.model = load_model(model_path)
 
     def q_loss_np(self, y_true, y_pred) -> np.ndarray:
-        y_true = self.denormalize_np(y_true, 0, self.max_card)
-        y_pred = self.denormalize_np(y_pred, 0, self.max_card)
-
         return np.maximum(y_true, y_pred) / np.minimum(y_true, y_pred)
 
     def load_data_file(self, file_path: str, override: bool = False) -> Dict[str, np.ndarray]:
@@ -216,11 +180,9 @@ class Estimator:
 
         self.data = data
 
-        self.max_card = np.log(np.max(self.data["y"]))
-
         self.input_length = len(self.data["x"][0])
 
-        self.data["y"] = self.normalize(self.data["y"])
+        self.data["y"] = self.data["y"]
 
     def split_data(self, split: float = 0.9):
         """
@@ -239,15 +201,15 @@ class Estimator:
 
         self.training_data["x"] = self.data["x"][sample]
         self.training_data["y"] = self.data["y"][sample]
-        if "postgres_estimate" in self.data and self.data["postgres_estimate"]:
+        if "postgres_estimate" in self.data and self.data["postgres_estimate"] is not None:
             self.training_data["postgres_estimate"] = self.data["postgres_estimate"][sample]
 
         self.test_data["x"] = self.data["x"][not_sample]
         self.test_data["y"] = self.data["y"][not_sample]
-        if "postgres_estimate" in self.data and self.data["postgres_estimate"]:
+        if "postgres_estimate" in self.data and self.data["postgres_estimate"] is not None:
             self.test_data["postgres_estimate"] = self.data["postgres_estimate"][not_sample]
 
-    def train(self, epochs: int = 100, verbose: int = 0, shuffle: bool = True, batch_size: int = 32,
+    def train(self, epochs: int = 100, verbose: int = 1, shuffle: bool = True, batch_size: int = 32,
               validation_split: float = 0.1) -> Union[History, History]:
         """
         Method for training the before created Model.
@@ -303,8 +265,9 @@ class Estimator:
 
         return self.model.predict(data).flatten()
 
-    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 0, shuffle: bool = True,
-            batch_size: int = 32, validation_split: float = 0.1, override_model: bool = False) -> np.ndarray:
+    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 1, shuffle: bool = True,
+            batch_size: int = 32, validation_split: float = 0.1, override_model: bool = False, save_model: bool = True,
+            save_model_file_path: str = "model") -> np.ndarray:
         """
         Method for a full run of the Estimator, with training and testing.
 
@@ -319,16 +282,22 @@ class Estimator:
         :param validation_split: How much of the data should be taken as validation set -> these are taken from the
             training data, not the test data, and are reselected for every epoch.
         :param override_model: Whether to override a probably already existing model.
+        :param save_model: Whether to save the trained model to file.
+        :param save_model_file_path: When save_model==True this parameter is required to give the path where the model
+            should be saved.
         :return: A numpy.ndarray containing the calculated q-error.
         """
 
         if data_file_path:
             self.load_data_file(data_file_path)
         self.split_data()
-        self.get_model(self.input_length)
+        self.get_model(self.input_length, override=override_model)
         history = self.train(epochs=epochs, verbose=verbose, shuffle=shuffle, batch_size=batch_size,
                              validation_split=validation_split)
         predictions = self.test()
+
+        if save_model:
+            self.save_model(filename=save_model_file_path)
 
         q_error_means = np.mean(self.q_loss_np(self.test_data["y"], predictions))
 

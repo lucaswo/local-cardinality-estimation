@@ -5,8 +5,10 @@ import os.path
 import csv
 from ast import literal_eval
 from tqdm import tqdm
+import itertools
 
 from typing import List, Tuple, Dict
+import re
 
 class Vectorizer:
     """Constructs a vector consisting of operator code and normalized value for each predicate in the sql query set with set_query method."""
@@ -48,6 +50,8 @@ class Vectorizer:
             for querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality in reader:
                 
                 expressions = query.split("WHERE", maxsplit=1)[1].split("AND")
+                join_matcher = re.compile(r'.+\..*id\s*=\s*.+\..*id\s*')
+                expressions = [expr for expr in expressions if not join_matcher.match(expr)]
                 assert self.n_max_expressions > len(expressions), f"Too many expressions concatinated by 'AND' in query! {query}"
 
                 query_parsed = [self.__parse_expression(expression) for expression in expressions]
@@ -71,10 +75,10 @@ class Vectorizer:
         """
 
         while len(self.vectorization_tasks) > 0:
-            _, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
+            querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
 
             n_total_columns = len(min_max_step)
-            vector = np.zeros(n_total_columns * self.n_max_expressions + 2) # constant 2 for estimated_cardinality and true_cardinality
+            vector = np.zeros(n_total_columns * self.n_max_expressions + 3) # constant 3 for estimated_cardinality, true_cardinality and querySetID
 
             # vectorize query
             for idx, query in enumerate(query): # requires sorted predicates
@@ -89,12 +93,14 @@ class Vectorizer:
             vector[-2] = self.__min_max_normalize(estimated_cardinality, max_card)
             vector[-1] = self.__min_max_normalize(true_cardinality, max_card)
 
+            vector = np.insert(vector, 0, querySetID, axis=0)
+
             self.vectorization_results.append(vector)
         return self.vectorization_results
 
     def __parse_expression(self, expression: str) -> Tuple[str, str, int]:
         """
-        Parses the given expression. Returns parse result: predicate, operator and value.
+        Parses the given expression. Parsing does not rely on spaces before and after operator, since these could be omitted within a query. Returns parse result: predicate, operator and value.
 
         :param expression: an exptression of a WHERE clause (are usually seperated by AND/ OR) e.g. 'kind_id != 8'
         :return: a triple with predicate, operator and value
@@ -102,8 +108,13 @@ class Vectorizer:
         """
 
         expression = expression.strip().strip(';')
-        predicate, operator, value = expression.split(" ")
-        return predicate, operator, int(value)
+        ops = sorted(self.operators.keys(), key=len, reverse=True)
+        for op in ops:
+            if op in expression:
+                predicate, value = expression.split(op)
+                operator = op
+                break
+        return predicate.strip(), operator.strip(), int(value)
 
 
     def __normalize(self, predicate: str, min_max_steps: Dict[str, Tuple[int, int, int]], encodings: Dict[int, str], value: int) -> float:
@@ -117,7 +128,8 @@ class Vectorizer:
         :param value: the value to be normalized
         :return: the normalized value
         """
-
+        if '.' in predicate: 
+            predicate = predicate.split('.')[1]
         min_val, max_val, step = min_max_steps[predicate]
         if predicate in encodings.keys():
             value = encodings[predicate].transform([int(value)])[0]
@@ -126,7 +138,7 @@ class Vectorizer:
         return (value - min_val + step) / (max_val - min_val + step)
     
 
-    def __min_max_normalize(self, value: number, max_cardinality: int, min_value: int = 0) -> float:
+    def __min_max_normalize(self, value: float, max_cardinality: int, min_value: int = 0) -> float:
         """
         Executes a min max normalization
         
@@ -140,20 +152,20 @@ class Vectorizer:
         value = np.log(value)
         return float(value - min_value)/(max_value - min_value)
 
-    def save(self, path: str):
+    def save(self, path: str, filename : str):
         """
-        Stores the SQL query and corresponding vector at given path as NPY and TXT file. Prepends a timestamp
+        Stores the SQL query and corresponding vector at given path as NPY and TXT file.
 
         :param path: path to a directory for saving
+        :param filename: filename without extension e.g. "queries_with_cardinalites_vectors"
         """
 
-        timestr = time.strftime("%Y%m%d_%H%M%S")
-        np.save( os.path.join(path, f"{timestr}_vector.npy"), np.array(self.vectorization_results) )
-        np.savetxt( os.path.join(path, f"{timestr}_vector.csv"), np.array(self.vectorization_results), delimiter=',', fmt="%.18g")
+        np.save(os.path.join(path, f"{filename}.npy"), np.array(self.vectorization_results) )
+        np.savetxt( os.path.join(path, f"{filename}.csv"), np.array(self.vectorization_results), delimiter=',', fmt="%.18g", header="querySetID, [vector], estimated_cardinality, true cardinality")
 
 def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]) -> np.array:
     """
-    Copy-pasted method of the original implementation for testing purposes
+    Copy-pasted method of the original implementation for testing purposes; Only added Join detection
     
     :param query: the query to vectorize
     :param min_max: dictionary of all min, max, step values for each predicate
@@ -175,9 +187,14 @@ def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]
         "IS": [0,0,1]
     }
     
+    join_matcher = re.compile(r'.+\..*id\s*=\s*.+\..*id\s*')
     for exp in predicates.split("AND"):
         exp = exp.strip()
+        if join_matcher.match(exp):
+            continue
         pred, op, value = exp.split(" ")
+        if '.' in pred: 
+            pred = pred.split('.')[1]
         if pred in encoders.keys():
             #value = encoders[pred].transform([value.replace("'", "")])[0]
             value = encoders[pred].transform([int(value)])[0]
@@ -191,34 +208,42 @@ def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]
 def vectorizer_tests():
     """Test method to compare the original implementation with jupyter notebook output (truth) or with the Vectorizer implementation. Succeeds if no assertion throws an error."""
 
-    sql_query = "SELECT COALESCE(SUM(count), 0) FROM tmpview_cube WHERE kind_id != 8;"
-    min_max_step = {'kind_id': (1, 8, 1), 'person_id': (1, 6226526, 1), 'role_id': (1, 11, 1)}
+    sql_queries = (
+        ["SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id < 2 AND mi_idx.info_type_id = 107 AND t.production_year > 2009;",
+            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id = 1 AND mi_idx.info_type_id < 80 AND t.production_year <= 1894;",
+            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id <= 1 AND mi_idx.info_type_id != 62 AND t.production_year <= 2094;",
+            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id >= 2 AND mi_idx.info_type_id > 45 AND t.production_year < 1939;",
+            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id = 2 AND mi_idx.info_type_id <= 32 AND t.production_year <= 1918;",
+            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id >= 2 AND mi_idx.info_type_id < 54 AND t.production_year <= 2097;",
+            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id <= 2 AND mi_idx.info_type_id >= 38 AND t.production_year < 1896;",
+            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id = 2 AND mi_idx.info_type_id <= 66 AND t.production_year = 2026;",]
+        ,
+        ["SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id = 1 AND mk.keyword_id >= 117023 AND t.production_year <= 1894;", 
+            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id >= 1 AND mk.keyword_id < 35239 AND t.production_year <= 1896;", 
+            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id < 2 AND mk.keyword_id <= 35888 AND t.production_year != 2020;", 
+            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id = 2 AND mk.keyword_id > 196933 AND t.production_year = 1907;", 
+            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id != 1 AND mk.keyword_id < 19712 AND t.production_year < 1980;", 
+            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id > 1 AND mk.keyword_id <= 186471 AND t.production_year < 2110;"]
+        )
+    min_max_step = ({'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}, 
+                    {'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]})
     encoders = {}
-    vector_truth = np.array([1,1,0,1,0,0,0,0,0,0,0,0], dtype=float)
-    max_card = (62143897,)[0]
-    postgres_cardinality_estimate = 63475836
-    cardinality = 62143871
-    normalized_cardinality = 0.999999976685163
 
     # original implementation copy-pasted test
-    vector_original = vectorize_query_original(sql_query, min_max_step, encoders)
-    assert np.allclose(vector_original, vector_truth)
+    original_vectors = []
+    for i in range(len(sql_queries)):
+        for query in sql_queries[i]:
+            original_vectors.append(vectorize_query_original(query, min_max_step[i], encoders))
+    original_vectors = np.array(original_vectors)
 
     # small vectorization test
     vectorizer = Vectorizer(4)
-    vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test.csv")
-    for vec in vectorizer.vectorize():
-        vector_vectorizer, card_est, card_norm = vec[:-2], vec[-2], vec[-1]
-        assert np.allclose(vector_vectorizer, vector_truth),  f"{vector_vectorizer} not close \n{vector_truth}"
-        assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
-
-    # bigger vectorization test
-    vectorizer = Vectorizer(4)
-    vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test_bigger.csv")
-    vectorizer.add_queries_with_cardinalities("/mnt/data/study/Forschungspraktikum/project/local-cardinality-estimation/vectorizer/fake_queries_with_cardinalities_test.csv")
-    for vec in vectorizer.vectorize():
-        vector_vectorizer, cardinality_estimation, cardinality_true = vec[:-2], vec[-2], vec[-1]
-    vectorizer.save("/mnt/data/programming/tmp/")
+    vectorizer.add_queries_with_cardinalities("assets/queries_with_cardinalities.csv")
+    vectorizer_vectors = np.array(vectorizer.vectorize())
+    assert np.allclose(vectorizer_vectors[:,1:-3], original_vectors),  f"{vectorizer_vectors[:,1:-3]} not close \n{original_vectors}"
+    #vector_vectorizer, card_est, card_norm = vec[:-2], vec[-2], vec[-1]
+    #assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
+    vectorizer.save("/mnt/data/programming/tmp/", "asset_queries_with_cardinalites_vectors")
 
 if __name__ == "__main__":
     vectorizer_tests()
