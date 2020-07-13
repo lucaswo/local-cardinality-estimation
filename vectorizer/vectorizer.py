@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
 import time
 import os.path
 import csv
@@ -28,9 +27,8 @@ class Vectorizer:
         Intitialises the Vectorizer object by defining available operators and maximum numbers of expressions allowed within a query. Returns the obejct.
         """
 
-        self.n_max_expressions = 0 # will be automatically determined
-        self.operator_code_length = len(next(iter(Vectorizer.operators.values())))
-        self.querySetID_predicates = {}
+        self.operator_code_length = len(next(iter(Vectorizer.operators.values())))        
+        self.querySetID_meta = {}
         self.vectorization_tasks = [] # may become a SimpleQueue in case of multithreading
         self.vectorization_results = []
 
@@ -48,34 +46,43 @@ class Vectorizer:
             reader = csv.reader(f, delimiter=';')
             for querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality in reader:
                 
+                querySetID = int(querySetID)
+                if querySetID not in self.querySetID_meta:
+                    self.querySetID_meta[querySetID] = {"predicates":[], "min_max_step":[], "n_max_expressions":0, "encodings":[]}
+
                 expressions = query.split("WHERE", maxsplit=1)[1].split("AND")
-                # Matches join statements as where clausel in a general manner. 
+                # Matches join statements within WHERE clausel in a general manner. 
                 # E.g.: a=b a=abc is matched as join statement, but a="b" a='b' a=9 not (for all numbers and letters respectivley)
-                join_matcher = re.compile(r'.+\s*=\s*[^"\'\d]\D*')
+                join_matcher = re.compile(r'.+\s*=\s*[^\d"\']*$')
                 expressions = [expr for expr in expressions if not join_matcher.match(expr)]
 
-                
                 query_parsed = [self.__parse_expression(expression) for expression in expressions]
-                query_parsed.sort(key=lambda x : x[0])
                 
-                # TODO: each querySetID needs such a "n_max_expressions", since its now automatically determined
-                if len(query_parsed) > self.n_max_expressions:
-                    self.n_max_expressions = len(query_parsed)
-                
-                # TODO: calculate this only for each querySetID once
-                self.querySetID_predicates[querySetID] = [x[0] for x in query_parsed]
+                if len(query_parsed) > self.querySetID_meta[querySetID]["n_max_expressions"]:
+                    self.querySetID_meta[querySetID]["n_max_expressions"] = len(query_parsed)
 
+                for predicate in [x[0] for x in query_parsed]:
+                    if predicate not in self.querySetID_meta[querySetID]["predicates"]:
+                        self.querySetID_meta[querySetID]["predicates"].append(predicate)
+
+                if self.querySetID_meta[querySetID]["encodings"] == []:
+                    enc = literal_eval(encodings)
+                    if enc == []:
+                        self.querySetID_meta[querySetID]["encodings"] = None
                 
+                if self.querySetID_meta[querySetID]["min_max_step"] == []:
+                    self.querySetID_meta[querySetID]["min_max_step"] = literal_eval(min_max_step)
+        
                 self.vectorization_tasks.append((
-                    int(querySetID),
+                    querySetID,
                     query_parsed,
-                    literal_eval(encodings),
                     int(max_card),
-                    literal_eval(min_max_step),
                     int(estimated_cardinality),
                     int(true_cardinality)
                     ))
-        print(self.n_max_expressions)
+        
+        for querySetID, meta in self.querySetID_meta.items():
+            meta["predicates"].sort()
 
 
     def vectorize(self) -> List[np.array]:
@@ -86,18 +93,20 @@ class Vectorizer:
         """
 
         while len(self.vectorization_tasks) > 0:
-            querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
+            querySetID, query, max_card, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
 
-            n_total_columns = len(min_max_step)
-            vector = np.zeros(n_total_columns * self.n_max_expressions + 3) # constant 3 for max_cardinality, estimated_cardinality, true_cardinality
+            min_max_step = self.querySetID_meta[querySetID]["min_max_step"]
+            n_max_expressions = self.querySetID_meta[querySetID]["n_max_expressions"]
+
+            vector = np.zeros(n_max_expressions * (self.operator_code_length + 1) + 3) # constant 1 for each value; constant 3 for max_cardinality, estimated_cardinality, true_cardinality
 
             # vectorize query
-            for idx, query in enumerate(query): # requires sorted predicates
-                predicate, operator, value = query
-                value_normalzed = self.__normalize(predicate, min_max_step, encodings, value)
+            for predicate, operator, value in query:
+                idx = self.querySetID_meta[querySetID]["predicates"].index(predicate)
+                value_normalzed = self.__normalize(querySetID, predicate, value)
 
-                end_idx = idx * self.n_max_expressions + self.operator_code_length
-                vector[idx*self.n_max_expressions:end_idx] = Vectorizer.operators[operator]
+                end_idx = idx * (self.operator_code_length + 1) + self.operator_code_length
+                vector[idx*(self.operator_code_length+1):end_idx] = Vectorizer.operators[operator]
                 vector[end_idx] = value_normalzed
                 
             # normalize/set cardinality information
@@ -129,23 +138,31 @@ class Vectorizer:
         return predicate.strip(), operator.strip(), int(value)
 
 
-    def __normalize(self, predicate: str, min_max_steps: List[Tuple[int, int, int]], encodings: List[Dict[int, str]], value: int) -> float:
+    def __normalize(self, querySetID: int, predicate: str, value: int) -> float:
         """
         Normalizes the value according to min-max statistics of the given predicate. If an encoding is avaiable for the predicate it is used.
         Normalization will result in value of range (0,1].
         
+        :param querySetID: id of the querySet to get the meta data for the given predicate
         :param predicate: attribute of the value
-        :param min_max_steps: dictionary of all min, max, step values for each predicate
-        :param encodings: dictionary, which maps predicates to encoders
         :param value: the value to be normalized
         :return: the normalized value
         """
-        min_val, max_val, step = min_max_steps[predicate]
-        if predicate in encodings.keys():
-            value = encodings[predicate].transform([int(value)])[0]
-        else:
-            value = max(min_val, float(value))
-        return (value - min_val + step) / (max_val - min_val + step)
+
+        predicate_idx = self.querySetID_meta[querySetID]["predicates"].index(predicate)
+        min_val, max_val, step = self.querySetID_meta[querySetID]["min_max_step"][predicate_idx]
+        encoding = self.querySetID_meta[querySetID]["encodings"]
+        
+        encoded_value = value
+        if encoding is not None:
+            encoding = encoding[predicate_idx]
+            if value in encoding.keys():
+                encoded_value = encoding[value]
+        
+        if value == encoded_value:
+            encoded_value = max(min_val, float(value))
+            
+        return (encoded_value - min_val + step) / (max_val - min_val + step)
     
 
     def __min_max_normalize(self, value: float, max_cardinality: int, min_value: int = 0) -> float:
@@ -176,7 +193,7 @@ class Vectorizer:
         if "csv" in filetypes:
             np.savetxt(f"{path}.csv", np.array(self.vectorization_results), delimiter=',', fmt="%.18g")
 
-def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: Dict[str, LabelEncoder]) -> np.array:
+def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: List[Dict[str, int]]) -> np.array:
     """
     Copy-pasted method of the original implementation for testing purposes; Only added Join detection
     
@@ -201,7 +218,7 @@ def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]
     }
     
     # not quite the original anymore due to query file adaptions
-    join_matcher = re.compile(r'.+\s*=\s*[^"\'\d]\D*')
+    join_matcher = re.compile(r'.+\s*=\s*[^\d"\']*$')
     exps = []
     for exp in predicates.split("AND"):
         exp = exp.strip()
@@ -245,7 +262,7 @@ def vectorizer_tests():
     # alphabetically sorted
     min_max_step = ([[1, 2, 1], [1, 113, 1], [1878, 2115, 1]], 
                     [[1, 2, 1], [1, 236627, 1], [1878, 2115, 1]])
-    encoders = [{}]
+    encoders = []
 
     # original implementation copy-pasted test
     original_vectors = []
@@ -258,6 +275,7 @@ def vectorizer_tests():
     vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities("assets/queries_with_cardinalities.csv")
     vectorizer_vectors = np.array(vectorizer.vectorize())
+    print(sql_queries[0][0])
     print(vectorizer_vectors[0,1:-3], len(vectorizer_vectors[0,1:-3]))
     print(original_vectors[0], len(original_vectors[0]))
 
