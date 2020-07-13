@@ -491,3 +491,43 @@
     - mi
   - - title
     - t
+17:
+  columns:
+  - - info_type_id
+    - mi_idx
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+    - ''
+  - - kind_id
+    - t
+    - integer
+    - - 1
+      - 8
+      - 1
+    - {}
+    - ''
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+    - ''
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mi_idx.movie_id
+  - t.id=mk.movie_id
+  max_card: 52169602735
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_info_idx
+    - mi_idx
+  - - movie_keyword
+    - mk
+  - - title
+    - t
