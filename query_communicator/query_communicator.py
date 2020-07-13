@@ -62,7 +62,7 @@ class QueryCommunicator():
         if outputfile:
             reduced_queries.to_csv(outputfile)
         else:
-            reduced_queries.to_csv('../assets/reduced_queries_with_cardinalities.csv')
+            reduced_queries.to_csv('../assets/queries_with_cardinalities.csv')
 
         return reduced_queries
 
@@ -93,7 +93,6 @@ class QueryCommunicator():
         depending if nullqueries are wanted or not.
         :return:
         '''
-        # Just a first template or idea
         if self.nullqueries == True:
             self.get_queries()
         else:

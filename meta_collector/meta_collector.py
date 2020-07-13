@@ -332,11 +332,7 @@ class MetaCollector:
 
         return result_dict
 
-<<<<<<< HEAD
-    def get_meta_from_file(self, file_path: str, save: bool = True, save_file_name: str = None, mode: int = 0,
-=======
     def get_meta_from_file(self, file_path: str, save: bool = True, save_file_path: str = None, mode: int = 0,
->>>>>>> origin/12-andreas-main-py
                            override: bool = True) -> Dict[int, any]:
         """
         Method for collecting meta data for the information given in a file from Crawler or at least a file formatted
@@ -344,26 +340,16 @@ class MetaCollector:
 
         :param file_path: Path to the file. Format has to be the same like the output of Crawler
         :param save: Whether to save the information to file or not. -> It is recommended to do so.
-<<<<<<< HEAD
-        :param save_file_name: Optional name for the file.
-=======
         :param save_file_path: Optional path for the save-file.
->>>>>>> origin/12-andreas-main-py
         :param mode: 0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
         :param override: Whether to override an already existing meta_information file.
         :return: The solution dict.
         """
 
         if override:
-<<<<<<< HEAD
-            if save_file_name:
-                if os.path.isfile(save_file_name + ".yaml"):
-                    os.remove(save_file_name + ".yaml")
-=======
             if save_file_path:
                 if os.path.isfile(save_file_path + ".yaml"):
                     os.remove(save_file_path + ".yaml")
->>>>>>> origin/12-andreas-main-py
             else:
                 if os.path.isfile("meta_information.yaml"):
                     os.remove("meta_information.yaml")
