@@ -24,7 +24,7 @@ class Vectorizer:
 
     def __init__(self):
         """
-        Intitialises the Vectorizer object by defining available operators and maximum numbers of expressions allowed within a query. Returns the obejct.
+        Intitialises the Vectorizer object by defining available operators.
         """
 
         self.operator_code_length = len(next(iter(Vectorizer.operators.values())))        
@@ -35,7 +35,8 @@ class Vectorizer:
     def add_queries_with_cardinalities(self, queries_with_cardinalities_path: str):
         """
         Reads CSV file with format (querySetID;query;encodings;max_card;min_max_step;estimated_cardinality;true_cardinality) whereas min_max_step is an array of the format 
-        [[1, 2, 1], [1, 113, 1], [1878, 2115, 1]] sorted by lexicographic order of corresponding predicates and encodings is an empty array if only integer values are processed.
+        [[1, 2, 1], [1, 113, 1], [1878, 2115, 1]] sorted by lexicographic order of corresponding predicates and encodings is an empty array if only integer values are processed. 
+        For a querySetID all predicates are collected and sorted in lexicographical order to provide correct indices (e.g. in encodings & min_max_value) for a given predicate.
         Read queries are added to the list of vectorisation tasks.
 
         :param queries_with_cardinalities_path: path to a CSV file containing all queries and their estimated and true cardinalities 
@@ -95,8 +96,6 @@ class Vectorizer:
 
         while len(self.vectorization_tasks) > 0:
             querySetID, query, max_card, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
-
-            min_max_step = self.querySetID_meta[querySetID]["min_max_step"]
             n_max_expressions = self.querySetID_meta[querySetID]["n_max_expressions"]
 
             vector = np.zeros(n_max_expressions * (self.operator_code_length + 1) + 3) # constant 1 for each value; constant 3 for max_cardinality, estimated_cardinality, true_cardinality
