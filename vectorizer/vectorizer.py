@@ -34,9 +34,9 @@ class Vectorizer:
 
     def add_queries_with_cardinalities(self, queries_with_cardinalities_path: str):
         """
-        Reads CSV file with format (querySetID;query;encodings;max_card;min_max_step) whereas min_max_step is a dictionary of the format 
-        {'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]} and encodings is an empty dictionary if only integer values are processed.
-        Read queries are added to the list of vectorisation tasks. Attention: queries must have sorted predicates.
+        Reads CSV file with format (querySetID;query;encodings;max_card;min_max_step;estimated_cardinality;true_cardinality) whereas min_max_step is an array of the format 
+        [[1, 2, 1], [1, 113, 1], [1878, 2115, 1]] sorted by lexicographic order of corresponding predicates and encodings is an empty array if only integer values are processed.
+        Read queries are added to the list of vectorisation tasks.
 
         :param queries_with_cardinalities_path: path to a CSV file containing all queries and their estimated and true cardinalities 
         """
@@ -81,6 +81,7 @@ class Vectorizer:
                     int(true_cardinality)
                     ))
         
+        # sort all predicates for a querySetID to correctly retrieve the index within encodings and min_max_step
         for querySetID, meta in self.querySetID_meta.items():
             meta["predicates"].sort()
 
@@ -89,7 +90,7 @@ class Vectorizer:
         """
         Vectorizes all vectorization tasks added.
         
-        :return: List of np.array vectors whereas each row contains the vectorized query and appended estimated and true cardinality (in this order) 
+        :return: List of np.array vectors whereas each row contains the vectorized query and appended maximal, estimated and true cardinality (in this order) 
         """
 
         while len(self.vectorization_tasks) > 0:
@@ -140,7 +141,7 @@ class Vectorizer:
 
     def __normalize(self, querySetID: int, predicate: str, value: int) -> float:
         """
-        Normalizes the value according to min-max statistics of the given predicate. If an encoding is avaiable for the predicate it is used.
+        Normalizes the value according to min-max statistics of the given predicate and the querySetID. If an encoding is avaiable for the predicate it is used.
         Normalization will result in value of range (0,1].
         
         :param querySetID: id of the querySet to get the meta data for the given predicate
@@ -187,7 +188,7 @@ class Vectorizer:
         :param filetypes: string of file types must contain "csv" or "npy"
         """
         
-        assert "npy" not in filetypes and  "csv" not in filetypes, "Valid file extention must be given. filetypes argument must contain 'csv' and/or 'npy'"
+        assert "npy" in filetypes or  "csv" in filetypes, "Valid file extention must be given. filetypes argument must contain 'csv' and/or 'npy'"
         if "npy" in filetypes: 
             np.save(f"{path}.npy", np.array(self.vectorization_results))
         if "csv" in filetypes:
@@ -274,7 +275,10 @@ def vectorizer_tests():
     # small vectorization test
     vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities("assets/queries_with_cardinalities.csv")
+    vectorizer.add_queries_with_cardinalities("assets/queries_with_cardinalities.csv") # duplicated to sumulate adding of two query files
     vectorizer_vectors = np.array(vectorizer.vectorize())
+    vectorizer_vectors = vectorizer_vectors[len(vectorizer_vectors)//2:,:]
+
     print(sql_queries[0][0])
     print(vectorizer_vectors[0,1:-3], len(vectorizer_vectors[0,1:-3]))
     print(original_vectors[0], len(original_vectors[0]))
@@ -282,7 +286,7 @@ def vectorizer_tests():
     assert np.allclose(vectorizer_vectors[:,1:-3], original_vectors),  f"{vectorizer_vectors[:,1:-3]} not close \n{original_vectors}"
     #vector_vectorizer, card_est, card_norm = vec[:-2], vec[-2], vec[-1]
     #assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
-    vectorizer.save("/mnt/data/programming/tmp/", "asset_queries_with_cardinalites_vectors")
+    vectorizer.save("/mnt/data/programming/tmp/asset_queries_with_cardinalites_vectors", "csv") # will store duplicated results, due to indentical second query file 
 
 if __name__ == "__main__":
     vectorizer_tests()
