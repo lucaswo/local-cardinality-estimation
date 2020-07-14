@@ -1,9 +1,9 @@
 from vectorizer import Vectorizer
 
-def vectorize(queries_with_cardinalities_csv_path : str, output_folder_path : str, filename : str):
-    vectorizer = Vectorizer(4)
+def vectorize(queries_with_cardinalities_csv_path : str, output_file_path : str, filetype : str):
+    vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities(queries_with_cardinalities_csv_path)
     vectorizer.vectorize()
-    vectorizer.save(output_folder_path, filename)
+    vectorizer.save(output_file_path, filetype)
 
-vectorize("assets/queries_with_cardinalities.csv", "/mnt/data/programming/tmp/", "main_py_test")
+vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")

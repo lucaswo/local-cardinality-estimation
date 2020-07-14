@@ -158,3 +158,5 @@ vectorizer/*.yaml
 vectorizer/*.csv
 /meta-collector/meta_information.yaml
 docs
+.vscode
+
