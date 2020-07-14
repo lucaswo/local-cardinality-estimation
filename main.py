@@ -14,11 +14,11 @@ def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
     mc.get_meta_from_file(file_path=file_path, save_file_path=save_file_path)
 
 
-def vectorize(queries_with_cardinalities_csv_path: str, output_folder_path: str, filename: str):
-    vectorizer = Vectorizer(4)
+def vectorize(queries_with_cardinalities_csv_path : str, output_file_path : str, filetype : str):
+    vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities(queries_with_cardinalities_csv_path)
     vectorizer.vectorize()
-    vectorizer.save(output_folder_path, filename)
+    vectorizer.save(output_file_path, filetype)
 
 
 def estimate(data_file_path: str, config_file_path: str, save_model_file_path: str):
@@ -31,5 +31,5 @@ if __name__ == "__main__":
     collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config.yaml",
                  save_file_path="assets/meta_information")
 
-    vectorize("assets/queries_with_cardinalities.csv", "/mnt/data/programming/tmp/", "main_py_test")
+    vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
     estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
