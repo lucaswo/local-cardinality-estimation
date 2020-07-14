@@ -2,6 +2,7 @@ from typing import Dict, Any, Union
 
 import numpy as np
 import yaml
+from keras import backend as K
 from keras.callbacks import History
 from keras.layers import Dense, Input, Dropout
 from keras.models import Model, load_model
@@ -20,6 +21,8 @@ class Estimator:
     data: Dict[str, np.ndarray] = {"x": None, "y": None, "postgres_estimate": None}
     training_data: Dict[str, np.ndarray] = {"x": None, "y": None, "postgres_estimate": None}
     test_data: Dict[str, np.ndarray] = {"x": None, "y": None, "postgres_estimate": None}
+
+    max_card: int = None
 
     model: Model = None
 
@@ -117,7 +120,38 @@ class Estimator:
 
         self.model = load_model(model_path)
 
+    @staticmethod
+    def denormalize(y, y_min: float, y_max: float):
+        """
+        :param y: tensor filled with values to denormalize
+        :param y_min: minimum value for y
+        :param y_max: maximum value for y
+        :return: tensor with denormalized values
+        """
+
+        return K.exp(y * (y_max - y_min) + y_min)
+
+    @staticmethod
+    def denormalize_np(y: np.ndarray, y_min: float, y_max: float) -> np.ndarray:
+        """
+        :param y: numpy-array filled with values to denormalize
+        :param y_min: minimum value for y
+        :param y_max: maximum value for y
+        :return: numpy-array with denormalized values
+        """
+
+        return np.exp(y * (y_max - y_min) + y_min)
+
+    def q_loss(self, y_true, y_pred):
+        y_true = self.denormalize(y_true, 0, self.max_card)
+        y_pred = self.denormalize(y_pred, 0, self.max_card)
+
+        return K.maximum(y_true, y_pred) / K.minimum(y_true, y_pred)
+
     def q_loss_np(self, y_true, y_pred) -> np.ndarray:
+        y_true = self.denormalize_np(y_true, 0, self.max_card)
+        y_pred = self.denormalize_np(y_pred, 0, self.max_card)
+
         return np.maximum(y_true, y_pred) / np.minimum(y_true, y_pred)
 
     def load_data_file(self, file_path: str, override: bool = False) -> Dict[str, np.ndarray]:
@@ -147,11 +181,15 @@ class Estimator:
         if loaded_data.shape[1] % 4 == 1:
             data["x"] = np.delete(loaded_data, -1, 1)
         elif loaded_data.shape[1] % 4 == 2:
-            data["postgres_estimate"] = loaded_data[:, -2]
+            self.max_card = np.log(loaded_data[:, -2][0])
             data["x"] = np.delete(loaded_data, np.s_[-2:], 1)
         elif loaded_data.shape[1] % 4 == 3:
             data["postgres_estimate"] = loaded_data[:, -2]
+            self.max_card = np.log(loaded_data[:, -3][0])
             data["x"] = np.delete(loaded_data, np.s_[-3:], 1)
+
+        if not self.max_card:
+            raise ValueError("Missing maximal cardinality in the data. See documentation for details.")
 
         data["y"] = loaded_data[:, -1]
 
@@ -286,7 +324,7 @@ class Estimator:
         if data_file_path:
             self.load_data_file(data_file_path)
         self.split_data()
-        self.get_model(self.input_length)
+        self.get_model(len_input=self.input_length, override=override_model)
         history = self.train(epochs=epochs, verbose=verbose, shuffle=shuffle, batch_size=batch_size,
                              validation_split=validation_split)
         predictions = self.test()
@@ -307,3 +345,7 @@ class Estimator:
             self.model.save("{}.h5".format(filename))
         else:
             raise ValueError("No model for saving defined!")
+
+
+est = Estimator()
+est.run(data_file_path="../assets/queries_with_cardinalites_vectors.csv")
