@@ -75,5 +75,5 @@ querySetID;query;encodings;max_card;min_max_step;estimated_cardinality;true_card
    vectors = vectorizer.vectorize()
    for vec in vectors:
       vectorized_query, cardinality_estimation, cardinality_true = vec[:-2], vec[-2], vec[-1]
-   vectorizer.save("/path/to/directory/")
+   vectorizer.save("/path/to/directory/filename", "csv")
    ```
