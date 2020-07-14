@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, Union
 
 import numpy as np
 import yaml
@@ -15,13 +15,14 @@ class Estimator:
     changed in 'config.yaml'.
     """
 
-    max_card: float = None
     input_length: int = None
 
     config: Dict = None
     data: Dict[str, np.ndarray] = {"x": None, "y": None, "postgres_estimate": None}
     training_data: Dict[str, np.ndarray] = {"x": None, "y": None, "postgres_estimate": None}
     test_data: Dict[str, np.ndarray] = {"x": None, "y": None, "postgres_estimate": None}
+
+    max_card: int = None
 
     model: Model = None
 
@@ -41,7 +42,7 @@ class Estimator:
         :param data: Optional parameter for giving the data for training and testing. If given it has to be a Dict with
             at least "x" and "y" and optionally "postgres_estimate" as keys. The values have to be numpy.ndarray. For
             key "x" it should be the vectorized queries, for key "y" the true cardinalities in the same order and for
-            optional key "postgres_estimate" the estimation of the postgres optimizer for the query.
+            optional key "postgres_estimate" the estimates of the postgres optimizer for the query.
         :param model: Option to pass a Model which can be used.
         :param model_path: Option to pass a path to a saved model in an .h5 file.
         :param debug: Boolean whether to print additional information while processing.
@@ -50,7 +51,7 @@ class Estimator:
         if model:
             self.model = model
         elif model_path:
-            self.model = load_model(model_path)
+            self.load_model(model_path)
         else:
             if config is None:
                 with open("config.yaml") as file:
@@ -110,6 +111,15 @@ class Estimator:
 
         return self.model
 
+    def load_model(self, model_path: str):
+        """
+        Method for loading an already existing model wich was saved to file.
+
+        :param model_path: Path to the file containing the model to load
+        """
+
+        self.model = load_model(model_path)
+
     @staticmethod
     def denormalize(y, y_min: float, y_max: float):
         """
@@ -131,19 +141,6 @@ class Estimator:
         """
 
         return np.exp(y * (y_max - y_min) + y_min)
-
-    @staticmethod
-    def normalize(y: np.ndarray) -> np.ndarray:
-        """
-        :param y: numpy-array with unnormalized values
-        :return: numpy-array with normalized values
-        """
-
-        y = np.log(y)
-        # if self.max_card is not None:
-        #     return (y - 0) / (self.max_card - 0)
-        # else:
-        return (y - min(y)) / (max(y) - min(y))
 
     def q_loss(self, y_true, y_pred):
         y_true = self.denormalize(y_true, 0, self.max_card)
@@ -184,11 +181,15 @@ class Estimator:
         if loaded_data.shape[1] % 4 == 1:
             data["x"] = np.delete(loaded_data, -1, 1)
         elif loaded_data.shape[1] % 4 == 2:
-            data["postgres_estimate"] = loaded_data[:, -2]
+            self.max_card = np.log(loaded_data[:, -2][0])
             data["x"] = np.delete(loaded_data, np.s_[-2:], 1)
         elif loaded_data.shape[1] % 4 == 3:
             data["postgres_estimate"] = loaded_data[:, -2]
+            self.max_card = np.log(loaded_data[:, -3][0])
             data["x"] = np.delete(loaded_data, np.s_[-3:], 1)
+
+        if not self.max_card:
+            raise ValueError("Missing maximal cardinality in the data. See documentation for details.")
 
         data["y"] = loaded_data[:, -1]
 
@@ -216,11 +217,9 @@ class Estimator:
 
         self.data = data
 
-        self.max_card = np.log(np.max(self.data["y"]))
-
         self.input_length = len(self.data["x"][0])
 
-        self.data["y"] = self.normalize(self.data["y"])
+        self.data["y"] = self.data["y"]
 
     def split_data(self, split: float = 0.9):
         """
@@ -239,15 +238,15 @@ class Estimator:
 
         self.training_data["x"] = self.data["x"][sample]
         self.training_data["y"] = self.data["y"][sample]
-        if "postgres_estimate" in self.data and self.data["postgres_estimate"]:
+        if "postgres_estimate" in self.data and self.data["postgres_estimate"] is not None:
             self.training_data["postgres_estimate"] = self.data["postgres_estimate"][sample]
 
         self.test_data["x"] = self.data["x"][not_sample]
         self.test_data["y"] = self.data["y"][not_sample]
-        if "postgres_estimate" in self.data and self.data["postgres_estimate"]:
+        if "postgres_estimate" in self.data and self.data["postgres_estimate"] is not None:
             self.test_data["postgres_estimate"] = self.data["postgres_estimate"][not_sample]
 
-    def train(self, epochs: int = 100, verbose: int = 0, shuffle: bool = True, batch_size: int = 32,
+    def train(self, epochs: int = 100, verbose: int = 1, shuffle: bool = True, batch_size: int = 32,
               validation_split: float = 0.1) -> Union[History, History]:
         """
         Method for training the before created Model.
@@ -303,7 +302,7 @@ class Estimator:
 
         return self.model.predict(data).flatten()
 
-    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 0, shuffle: bool = True,
+    def run(self, data_file_path: str = None, epochs: int = 100, verbose: int = 1, shuffle: bool = True,
             batch_size: int = 32, validation_split: float = 0.1, override_model: bool = False) -> np.ndarray:
         """
         Method for a full run of the Estimator, with training and testing.
@@ -325,7 +324,7 @@ class Estimator:
         if data_file_path:
             self.load_data_file(data_file_path)
         self.split_data()
-        self.get_model(self.input_length)
+        self.get_model(len_input=self.input_length, override=override_model)
         history = self.train(epochs=epochs, verbose=verbose, shuffle=shuffle, batch_size=batch_size,
                              validation_split=validation_split)
         predictions = self.test()
@@ -346,3 +345,7 @@ class Estimator:
             self.model.save("{}.h5".format(filename))
         else:
             raise ValueError("No model for saving defined!")
+
+
+est = Estimator()
+est.run(data_file_path="../assets/queries_with_cardinalites_vectors.csv")
