@@ -3,31 +3,29 @@
   - - company_type_id
     - mc
     - integer
+    - - 1
+      - 2
+      - 1
+    - {}
   - - info_type_id
     - mi_idx
     - integer
+    - - 1
+      - 113
+      - 1
+    - {}
   - - production_year
     - t
     - integer
-  encodings: {}
+    - - 1874
+      - 2115
+      - 1
+    - {}
   join_attributes:
-  - t.id=mi_idx.movie_id
   - t.id=mc.movie_id
+  - t.id=mi_idx.movie_id
   max_card:
   - 134163798
-  min_max_step:
-    company_type_id:
-    - 1
-    - 2
-    - 1
-    info_type_id:
-    - 1
-    - 113
-    - 1
-    production_year:
-    - 1878
-    - 2115
-    - 1
   table_names:
   - - movie_companies
     - mc
@@ -40,35 +38,436 @@
   - - company_type_id
     - mc
     - integer
+    - - 1
+      - 2
+      - 1
+    - {}
   - - keyword_id
     - mk
     - integer
+    - - 1
+      - 236627
+      - 1
+    - {}
   - - production_year
     - t
     - integer
-  encodings: {}
+    - - 1874
+      - 2115
+      - 1
+    - {}
   join_attributes:
-  - t.id=mc.movie_id
   - t.id=mk.movie_id
+  - t.id=mc.movie_id
   max_card:
   - 63056995
-  min_max_step:
-    company_type_id:
-    - 1
-    - 2
-    - 1
-    keyword_id:
-    - 1
-    - 236627
-    - 1
-    production_year:
-    - 1878
-    - 2115
-    - 1
   table_names:
   - - movie_companies
     - mc
   - - movie_keyword
     - mk
+  - - title
+    - t
+2:
+  columns:
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=mk.movie_id
+  - t.id=mi.movie_id
+  max_card:
+  - 449824188
+  table_names:
+  - - movie_info
+    - mi
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+3:
+  columns:
+  - - info_type_id
+    - mi_idx
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=mk.movie_id
+  - t.id=mi_idx.movie_id
+  max_card:
+  - 449824188
+  table_names:
+  - - movie_info_idx
+    - mi_idx
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+4:
+  columns:
+  - - company_type_id
+    - mc
+    - integer
+    - - 1
+      - 2
+      - 1
+    - {}
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=mc.movie_id
+  max_card:
+  - 134163798
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - title
+    - t
+5:
+  columns:
+  - - keyword_id
+    - mk
+    - integer
+    - - 1
+      - 236627
+      - 1
+    - {}
+  - - kind_id
+    - t
+    - integer
+    - - 1
+      - 8
+      - 1
+    - {}
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mk.movie_id
+  max_card:
+  - 358045425
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+6:
+  columns:
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=ci.movie_id
+  max_card:
+  - 62143897
+  table_names:
+  - - cast_info
+    - ci
+  - - title
+    - t
+7:
+  columns:
+  - - role_id
+    - ci
+    - integer
+    - - 1
+      - 11
+      - 1
+    - {}
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mc.movie_id
+  max_card:
+  - 144075048
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_companies
+    - mc
+  - - title
+    - t
+8:
+  columns:
+  - - company_type_id
+    - mc
+    - integer
+    - - 1
+      - 2
+      - 1
+    - {}
+  - - info_type_id
+    - mi
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+  - - info_type_id
+    - mi_idx
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+    - mi_idx_info_type_id
+  - - kind_id
+    - t
+    - integer
+    - - 1
+      - 8
+      - 1
+    - {}
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=mi.movie_id
+  - t.id=mc.movie_id
+  - t.id=mi_idx.movie_id
+  max_card:
+  - 24895483580
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - movie_info_idx
+    - mi_idx
+  - - title
+    - t
+9:
+  columns:
+  - - info_type_id
+    - mi
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+  - - info_type_id
+    - mi_idx
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+    - mi_idx_info_type_id
+  - - kind_id
+    - t
+    - integer
+    - - 1
+      - 8
+      - 1
+    - {}
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=mk.movie_id
+  - t.id=mi.movie_id
+  - t.id=mi_idx.movie_id
+  max_card:
+  - 108510690180
+  table_names:
+  - - movie_info
+    - mi
+  - - movie_info_idx
+    - mi_idx
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+10:
+  columns:
+  - - company_type_id
+    - mc
+    - integer
+    - - 1
+      - 2
+      - 1
+    - {}
+  - - info_type_id
+    - mi
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+  - - keyword_id
+    - mk
+    - integer
+    - - 1
+      - 236627
+      - 1
+    - {}
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=mk.movie_id
+  - t.id=mi.movie_id
+  - t.id=mc.movie_id
+  max_card:
+  - 11101012768
+  table_names:
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+11:
+  columns:
+  - - keyword_id
+    - mk
+    - integer
+    - - 1
+      - 236627
+      - 1
+    - {}
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mk.movie_id
+  - t.id=mc.movie_id
+  max_card:
+  - 6187664411
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_companies
+    - mc
+  - - movie_keyword
+    - mk
+  - - title
+    - t
+12:
+  columns:
+  - - info_type_id
+    - mi
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+  - - info_type_id
+    - mi_idx
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+    - mi_idx_info_type_id
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mi.movie_id
+  - t.id=mi_idx.movie_id
+  max_card:
+  - 113683591214
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_info
+    - mi
+  - - movie_info_idx
+    - mi_idx
+  - - title
+    - t
+13:
+  columns:
+  - - role_id
+    - ci
+    - integer
+    - - 1
+      - 11
+      - 1
+    - {}
+  - - info_type_id
+    - mi
+    - integer
+    - - 1
+      - 113
+      - 1
+    - {}
+  - - production_year
+    - t
+    - integer
+    - - 1874
+      - 2115
+      - 1
+    - {}
+  join_attributes:
+  - t.id=ci.movie_id
+  - t.id=mi.movie_id
+  - t.id=mc.movie_id
+  max_card:
+  - 11919870112
+  table_names:
+  - - cast_info
+    - ci
+  - - movie_companies
+    - mc
+  - - movie_info
+    - mi
   - - title
     - t
