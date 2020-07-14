@@ -434,3 +434,10 @@ mc.get_meta(["movie_companies", "movie_info_idx", "title"], ["production_year", 
 # mc.get_meta_from_file(file_path="../assets/solution_dict.yaml")
 # mc.get_meta(["title"], ["imdb_index"])
 db_conn.close_database_connection()
+
+
+mc = MetaCollector()
+# example which should work -> takes quite a while to be processed
+# mc.get_meta(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
+
+mc.get_meta_from_file(file_path="../assets/solution_dict.yaml", save_file_name="../assets/meta_information")
