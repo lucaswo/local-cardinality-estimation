@@ -235,8 +235,6 @@ class MetaCollector:
                                                                                    table_names[0])
 
         if mode == CreationMode.TEMPORARY or mode == CreationMode.PERMANENT:
-            # self.db_conn.execute(sql)
-            # sql = """ANALYZE {};""".format(new_table_name)
             self.db_conn.execute(sql)
             sql = """SELECT count(*) FROM {};""".format(new_table_name)
 
@@ -257,12 +255,6 @@ class MetaCollector:
             tab=new_table_name, col=",".join(column[0].split(".")[-1] for column in columns))
 
         self.db_conn.execute(sql)
-
-        # sql = """ANALYZE {}_cube;""".format(new_table_name)
-        #
-        # if self.debug:
-        #     print("Executing: {}".format(sql))
-        # self.db_conn.execute(sql)
 
     @staticmethod
     def eliminate_duplicates(columns: List[str]) -> List[str]:
@@ -321,13 +313,6 @@ class MetaCollector:
         else:
             raise ValueError("Invalid CreationMode selected!")
 
-        # already_seen = []
-        # for index, col in enumerate(columns_data):
-        #     if col[0] not in already_seen:
-        #         already_seen.append(col[0])
-        #     else:
-        #         columns_data[index] = (col[0], col[1], col[2], col[3], col[4], "_".join([col[1], col[0]]))
-
         result_dict = {"table_names": table_names,
                        "columns": columns_data,
                        "join_attributes": join_atts,
@@ -372,6 +357,7 @@ class MetaCollector:
             batch = yaml.safe_load(file)
 
         for index in batch:
+            if index != 14: continue
             solution_dict = {index: self.get_meta(table_names=batch[index]["table_names"],
                                                   columns=batch[index]["selection_attributes"],
                                                   join_atts=batch[index]["join_attributes"],
@@ -429,15 +415,8 @@ db_conn.connect(config_file_path="config_mariadb.yaml")
 # db_conn = DatabaseConnector(database=Database.POSTGRES)
 # db_conn.connect(config_file_path="config_postgres.yaml")
 mc = MetaCollector(db_conn)
-mc.get_meta(["movie_companies", "movie_info_idx", "title"], ["production_year", "info_type_id", "company_type_id"],
-            ["title.id=movie_companies.movie_id", "title.id=movie_info_idx.movie_id"], mode=CreationMode.TEMPORARY)
-# mc.get_meta_from_file(file_path="../assets/solution_dict.yaml")
+# mc.get_meta(["movie_companies", "movie_info_idx", "title"], ["production_year", "info_type_id", "company_type_id"],
+#             ["title.id=movie_companies.movie_id", "title.id=movie_info_idx.movie_id"], mode=CreationMode.TEMPORARY)
+mc.get_meta_from_file(file_path="../assets/solution_dict.yaml")
 # mc.get_meta(["title"], ["imdb_index"])
 db_conn.close_database_connection()
-
-
-mc = MetaCollector()
-# example which should work -> takes quite a while to be processed
-# mc.get_meta(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
-
-mc.get_meta_from_file(file_path="../assets/solution_dict.yaml", save_file_name="../assets/meta_information")
