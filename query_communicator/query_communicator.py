@@ -1,7 +1,11 @@
-import yaml
-from postgres_evaluator import PostgresEvaluator
-from sql_generator import SQLGenarator
-import pandas as pd
+from query_communicator.postgres_evaluator.postgres_evaluator import PostgresEvaluator
+from query_communicator.sql_generator.sql_generator import SQLGenerator
+import csv
+import numpy as np
+from typing import Tuple, Dict, List
+
+
+
 
 class QueryCommunicator():
     '''
@@ -14,7 +18,8 @@ class QueryCommunicator():
     Vice Versa, the Evaluator is not able to generate new queries, if there are nullqueries.
     '''
 
-    def __init__(self, meta: str = '../assets/meta_information.yaml', query_number: int = 10, nullqueries: bool = False):
+    def __init__(self, meta: str = '../assets/meta_information.yaml', query_number: int = 10,
+                 nullqueries: bool = False):
         '''
 
         :param meta: meta information, needed to generate queries
@@ -34,7 +39,7 @@ class QueryCommunicator():
         Function for generating queries and their cardinalities if nullqueries are allowed.
         :return:
         '''
-        generator = SQLGenarator(config=self.meta)
+        generator = SQLGenerator(config=self.meta)
         print("generate ", self.query_number, " queries")
         generator.generate_queries(qnumber=self.query_number, save_readable='../assets/null_including_queries.sql')
 
@@ -52,17 +57,18 @@ class QueryCommunicator():
         generate = int(self.query_number * 1.5)
         # number of distinct queries
 
-        generator = SQLGenarator(config=self.meta)
-        generator.generate_queries(qnumber=generate, save_readable='../assets/nullfree_queries.sql')
+        generator = SQLGenerator(config=self.meta)
+        generator.generate_queries(qnumber=generate, save_readable='nullfree_queries')
 
         evaluator = PostgresEvaluator()
         evaluator.get_cardinalities()
         reduced_queries = self.reduce_queries()
 
         if outputfile:
-            reduced_queries.to_csv(outputfile)
+            self.write_queries(reduced_q=reduced_queries, save_file_path=outputfile)
         else:
-            reduced_queries.to_csv('../assets/reduced_queries_with_cardinalities.csv')
+            self.write_queries(reduced_q=reduced_queries,
+                               save_file_path='../assets/reduced_queries_with_cardinalities.csv')
 
         return reduced_queries
 
@@ -71,21 +77,33 @@ class QueryCommunicator():
         Reduces genrated queries to the requested number of queries
         :return:DataFrame with reduced query sets
         '''
-        queries = pd.read_csv('../assets/queries_with_cardinalities.csv',delimiter=';')
-        setIDs = set(queries.querySetID.to_list())
-        reduced_queries = pd.DataFrame(columns=queries.columns)
-
+        with open('../assets/queries_with_cardinalities.csv', 'r') as file:
+            csv_reader = csv.reader(file, delimiter=';')
+            queries = np.array([r for r in csv_reader])
+            setIDs = set(queries[1:, 0])
+            reduced_queries = []
+            reduced_queries.append(queries[0].tolist())
         for id in setIDs:
-            df = queries[queries['querySetID'] == id]
-            if len(df) > self.query_number:
-                df = df[:self.query_number]
-                reduced_queries = reduced_queries.append(df)
-                print('%d queries have been generated for query set %d!' % (len(df), id))
+            query_n = np.where(queries[:, 0] == id)
+            if len(query_n) > self.query_number:
+                query_n = query_n[:self.query_number]
+                rq = [queries.tolist()[i] for i in query_n[0].tolist()]
+                for q in rq:
+                    reduced_queries.append(q)
+                print('%d queries have been generated for query set %d!' % (len(query_n[0]), int(id)))
             else:
-                reduced_queries = reduced_queries.append(df)
-                print('%d queries have been generated for query set %d!' % (len(df), id))
+                rq = [queries.tolist()[i] for i in query_n[0].tolist()]
+                for q in rq:
+                    reduced_queries.append(q)
+                print('%d queries have been generated for query set %d!' % (len(query_n[0]), int(id)))
 
         return reduced_queries
+
+    def write_queries(self, reduced_q: List, save_file_path: str = '../assets/reduced_queries_with_cardinalities.csv'):
+        with open(save_file_path, 'w') as file:
+            writer = csv.writer(file, delimiter=';')
+            for q in reduced_q:
+                writer.writerow(q)
 
     def produce_queries(self):
         '''
@@ -99,6 +117,3 @@ class QueryCommunicator():
         else:
             self.get_nullfree_queries()
 
-
-com = QueryCommunicator(nullqueries=False, query_number=20)
-com.produce_queries()

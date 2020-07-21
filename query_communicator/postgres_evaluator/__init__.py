@@ -1,1 +1,1 @@
-from postgres_evaluator.postgres_evaluator import PostgresEvaluator
+from query_communicator.postgres_evaluator.postgres_evaluator import PostgresEvaluator

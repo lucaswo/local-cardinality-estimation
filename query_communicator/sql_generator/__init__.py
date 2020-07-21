@@ -1,1 +1,1 @@
-from sql_generator.sql_generator import SQLGenarator
+from query_communicator.sql_generator.sql_generator import SQLGenerator

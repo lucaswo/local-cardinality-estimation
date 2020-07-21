@@ -5,7 +5,7 @@ import csv
 import time
 
 
-class SQLGenarator:
+class SQLGenerator:
     '''
     Class for generating SQL queries. Uses Meta Information from MetaCollector Step before.
     '''
