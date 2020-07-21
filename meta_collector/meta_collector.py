@@ -421,10 +421,3 @@ class MetaCollector:
         if self.debug:
             print("Executing: {}".format(sql_string))
         self.cur.execute(sql_string)
-
-
-mc = MetaCollector()
-# example which should work -> takes quite a while to be processed
-# mc.get_meta(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
-
-mc.get_meta_from_file(file_path="../assets/solution_dict.yaml", save_file_name="../assets/meta_information")

@@ -1,3 +1,5 @@
+import numpy as np
+
 from crawler import Crawler
 from estimator import Estimator
 from meta_collector import MetaCollector
@@ -14,7 +16,7 @@ def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
     mc.get_meta_from_file(file_path=file_path, save_file_path=save_file_path)
 
 
-def vectorize(queries_with_cardinalities_csv_path : str, output_file_path : str, filetype : str):
+def vectorize(queries_with_cardinalities_csv_path: str, output_file_path: str, filetype: str):
     vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities(queries_with_cardinalities_csv_path)
     vectorizer.vectorize()
@@ -22,8 +24,20 @@ def vectorize(queries_with_cardinalities_csv_path : str, output_file_path : str,
 
 
 def estimate(data_file_path: str, config_file_path: str, save_model_file_path: str):
-    estimator = Estimator(config_file_path=config_file_path)
-    estimator.run(data_file_path=data_file_path, save_model_file_path=save_model_file_path)
+    loaded_data = []
+    if data_file_path.split(".")[-1] == "csv":
+        loaded_data = np.genfromtxt(data_file_path, delimiter=",")
+    elif data_file_path.split(".")[-1] == "npy":
+        loaded_data = np.load(data_file_path)
+
+    query_set_ids = set([x.astype(int) for x in loaded_data[:, 0]])
+
+    for query_set_id in query_set_ids:
+        data = loaded_data[np.where(loaded_data[:, 0].astype(int) == query_set_id)]
+        data = data[:, 1:]
+
+        estimator = Estimator(config_file_path=config_file_path, data=data)
+        estimator.run(save_model_file_path=save_model_file_path + "_{}".format(query_set_id))
 
 
 if __name__ == "__main__":
