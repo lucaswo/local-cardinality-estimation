@@ -1,0 +1,1 @@
+from query_communicator.query_communicator import QueryCommunicator

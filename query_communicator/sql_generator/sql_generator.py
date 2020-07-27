@@ -53,7 +53,7 @@ class SQLGenerator:
         :param file: file name for sql file
         :return:
         '''
-        with open('../../assets/%s.sql' % (file), 'w+') as file:
+        with open('%s.sql' % (file), 'w+') as file:
             for q in queries:
                 file.write(q[1] + '\n')
 
@@ -114,7 +114,7 @@ class SQLGenerator:
         all_queries = []
         header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step']
 
-        with open('../../assets/%s.csv' % (save_readable), 'w') as file:
+        with open('%s.csv' % (save_readable), 'w') as file:
             writer = csv.DictWriter(file, delimiter=';', fieldnames=header)
             writer.writeheader()
 

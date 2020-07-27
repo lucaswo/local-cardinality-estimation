@@ -1,5 +1,5 @@
-from query_communicator.postgres_evaluator.postgres_evaluator import PostgresEvaluator
-from query_communicator.sql_generator.sql_generator import SQLGenerator
+from postgres_evaluator import PostgresEvaluator
+from sql_generator import SQLGenerator
 import csv
 import numpy as np
 from typing import Tuple, Dict, List
@@ -18,57 +18,48 @@ class QueryCommunicator():
     Vice Versa, the Evaluator is not able to generate new queries, if there are nullqueries.
     '''
 
-    def __init__(self, meta: str = '../assets/meta_information.yaml', query_number: int = 10,
-                 nullqueries: bool = False):
-        '''
+    def __init__(self, meta_file_path: str = '../assets/meta_information.yaml'):
+        self.meta = meta_file_path
 
-        :param meta: meta information, needed to generate queries
-        :param nullqueries: decide whether to generate nullqueries or not, default: no nullqueries
-        :param query_number: count of queries that are generated per meta file entry
-        '''
-        if not meta:
-            raise ValueError('No meta file given, but at least needed!')
-        else:
-            self.meta = meta
-            self.nullqueries = nullqueries
-            self.query_number = query_number
 
-    def get_queries(self) -> str:
+    def get_queries(self, query_number:int = 10) -> str:
         '''
         Function for generating queries and their cardinalities if nullqueries are allowed.
         Saves generated queries in ../assets/queries_with_cardinalities.csv
         :return:
         '''
         generator = SQLGenerator(config=self.meta)
-        print("generate ", self.query_number, " queries")
-        generator.generate_queries(qnumber=self.query_number, save_readable='null_including_queries')
+        print("generate ", query_number, " queries")
+        generator.generate_queries(qnumber=query_number, save_readable='../assets/null_including_queries')
 
+        #TODO: save file path as parameter in evaluator, so save file path can be passed trough
         evaluator = PostgresEvaluator(input_file_name='null_including_queries.csv')
         evaluator.get_cardinalities()
 
-    def get_nullfree_queries(self, save_file_path: str):
+    def get_nullfree_queries(self,query_number:int,save_file_path: str):
         '''
-        Function for generation an evaluation of the queries when nullfree. Communication
-        is bounded by a number of Iteration in order to avoid an endless process of generation an Evaluation.
-        There will be less queries then deserved, if unavoidable.
+        Function that generates given number queries and their cardinalities which are not zero.
+        There will be less queries then requested, if unavoidable.
+        :param query_number: number of queries to generate
+        :param save_file_path: path to save the finished queries with their cardinalities
         :return: list of remained Queries
         '''
         # generate 150% queries
-        generate = int(self.query_number * 1.5)
+        query_number_with_buffer = int(query_number * 1.5)
 
         # number of distinct queries
         generator = SQLGenerator(config=self.meta)
-        generator.generate_queries(qnumber=generate, save_readable='nullfree_queries')
+        generator.generate_queries(qnumber=query_number_with_buffer, save_readable='../assets/nullfree_queries')
 
         evaluator = PostgresEvaluator(input_file_name='nullfree_queries.csv')
         evaluator.get_cardinalities()
-        reduced_queries = self.reduce_queries()
+        reduced_queries = self.reduce_queries(query_number=query_number)
 
-        self.write_queries(reduced_q=reduced_queries, save_file_path=save_file_path)
+        self.write_queries(queries=reduced_queries, save_file_path=save_file_path)
 
         return reduced_queries
 
-    def reduce_queries(self):
+    def reduce_queries(self,query_number):
         '''
         Reduces genrated queries to the requested number of queries
         :return:DataFrame with reduced query sets
@@ -81,8 +72,8 @@ class QueryCommunicator():
             reduced_queries.append(queries[0].tolist())
         for id in setIDs:
             query_n = np.where(queries[:, 0] == id)
-            if len(query_n) > self.query_number:
-                query_n = query_n[:self.query_number]
+            if len(query_n) > query_number:
+                query_n = query_n[query_number]
                 rq = [queries.tolist()[i] for i in query_n[0].tolist()]
                 for q in rq:
                     reduced_queries.append(q)
@@ -95,7 +86,7 @@ class QueryCommunicator():
 
         return reduced_queries
 
-    def write_queries(self, reduced_q: List, save_file_path: str = '../assets/reduced_queries_with_cardinalities.csv'):
+    def write_queries(self, queries: List, save_file_path: str = '../assets/reduced_queries_with_cardinalities.csv'):
         '''
         function for writing the csv file with the reduced queries
         :param reduced_q: list of queries to write in a csv file
@@ -104,17 +95,21 @@ class QueryCommunicator():
         '''
         with open(save_file_path, 'w') as file:
             writer = csv.writer(file, delimiter=';')
-            for q in reduced_q:
+            for q in queries:
                 writer.writerow(q)
 
-    def produce_queries(self,save_file_path:str = '../assets/reduced_queries_with_cardinalities.csv'):
+    def produce_queries(self, query_number: int = 10, nullqueries: bool = False, save_file_path:str = '../assets/reduced_queries_with_cardinalities.csv'):
         '''
         Main function to produce the queries and return the correct csv file,
-        depending if nullqueries are wanted or not.
+        depending if nullqueries are wanted or not
+
+        :param meta: meta information, needed to generate queries
+        :param nullqueries: decide whether to generate nullqueries or not, default: no nullqueries
+        :param query_number: count of queries that are generated per meta file entry
         :return:
         '''
-        if self.nullqueries == True:
-            self.get_queries()
+        if nullqueries == True:
+            self.get_queries(query_number=query_number)
         else:
-            self.get_nullfree_queries(save_file_path=save_file_path)
+            self.get_nullfree_queries(save_file_path=save_file_path,query_number=query_number)
 
