@@ -40,13 +40,14 @@ def estimate(data_file_path: str, config_file_path: str, save_model_file_path: s
         estimator = Estimator(config_file_path=config_file_path, data=data)
         estimator.run(save_model_file_path=save_model_file_path + "_{}".format(query_set_id))
 
-def communicate(file_path:str,query_number:int,nullqueries:bool):
-    communicator = QueryCommunicator(file_path,query_number,nullqueries)
-    communicator.produce_queries()
+def communicate(input_file_path:str,query_number:int,nullqueries:bool,save_file_path:str):
+    communicator = QueryCommunicator(meta_file_path=input_file_path)
+    communicator.produce_queries(query_number=query_number,nullqueries=nullqueries,save_file_path=save_file_path)
 
 if __name__ == "__main__":
     crawl("assets/job-light.sql", "assets/solution_dict")
     collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config.yaml",
                  save_file_path="assets/meta_information")
-    vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
+    communicate(input_file_path='assets/meta_information.yaml',query_number=20,nullqueries=False,save_file_path='assets/fin_queries_with_cardinalities.csv')
+    vectorize("assets/fin_queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
     estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
