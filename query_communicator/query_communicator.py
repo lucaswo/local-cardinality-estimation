@@ -108,7 +108,6 @@ class QueryCommunicator():
         :param query_number: count of queries that are generated per meta file entry
         :return:
         '''
-
         if nullqueries == True:
             self.get_queries(query_number=query_number)
         else:
