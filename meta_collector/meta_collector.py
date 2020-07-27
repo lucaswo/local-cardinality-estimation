@@ -347,10 +347,8 @@ class MetaCollector:
 
         return result_dict
 
-
     def get_meta_from_file(self, file_path: str, save: bool = True, save_file_path: str = None,
                            mode: CreationMode = CreationMode.NONE, override: bool = True) -> Dict[int, any]:
-
         """
         Method for collecting meta data for the information given in a file from Crawler or at least a file formatted
         like this.
