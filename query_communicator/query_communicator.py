@@ -35,40 +35,36 @@ class QueryCommunicator():
 
     def get_queries(self) -> str:
         '''
-        TODO: percentage of nullqueries adjustable -> only a 'nice to have' at first
         Function for generating queries and their cardinalities if nullqueries are allowed.
+        Saves generated queries in ../assets/queries_with_cardinalities.csv
         :return:
         '''
         generator = SQLGenerator(config=self.meta)
         print("generate ", self.query_number, " queries")
-        generator.generate_queries(qnumber=self.query_number, save_readable='../assets/null_including_queries.sql')
+        generator.generate_queries(qnumber=self.query_number, save_readable='null_including_queries')
 
-        evaluator = PostgresEvaluator()
+        evaluator = PostgresEvaluator(input_file_name='null_including_queries.csv')
         evaluator.get_cardinalities()
 
-    def get_nullfree_queries(self, outputfile: str = '../assets/reduced_queries_with_cardinalities.csv'):
+    def get_nullfree_queries(self, save_file_path: str):
         '''
         Function for generation an evaluation of the queries when nullfree. Communication
         is bounded by a number of Iteration in order to avoid an endless process of generation an Evaluation.
         There will be less queries then deserved, if unavoidable.
-        :return: reduced Queries as DataFrame
+        :return: list of remained Queries
         '''
         # generate 150% queries
         generate = int(self.query_number * 1.5)
-        # number of distinct queries
 
+        # number of distinct queries
         generator = SQLGenerator(config=self.meta)
         generator.generate_queries(qnumber=generate, save_readable='nullfree_queries')
 
-        evaluator = PostgresEvaluator()
+        evaluator = PostgresEvaluator(input_file_name='nullfree_queries.csv')
         evaluator.get_cardinalities()
         reduced_queries = self.reduce_queries()
 
-        if outputfile:
-            self.write_queries(reduced_q=reduced_queries, save_file_path=outputfile)
-        else:
-            self.write_queries(reduced_q=reduced_queries,
-                               save_file_path='../assets/reduced_queries_with_cardinalities.csv')
+        self.write_queries(reduced_q=reduced_queries, save_file_path=save_file_path)
 
         return reduced_queries
 
@@ -100,20 +96,25 @@ class QueryCommunicator():
         return reduced_queries
 
     def write_queries(self, reduced_q: List, save_file_path: str = '../assets/reduced_queries_with_cardinalities.csv'):
+        '''
+        function for writing the csv file with the reduced queries
+        :param reduced_q: list of queries to write in a csv file
+        :param save_file_path: file path, where to save the file
+        :return:
+        '''
         with open(save_file_path, 'w') as file:
             writer = csv.writer(file, delimiter=';')
             for q in reduced_q:
                 writer.writerow(q)
 
-    def produce_queries(self):
+    def produce_queries(self,save_file_path:str = '../assets/reduced_queries_with_cardinalities.csv'):
         '''
         Main function to produce the queries and return the correct csv file,
         depending if nullqueries are wanted or not.
         :return:
         '''
-        # Just a first template or idea
         if self.nullqueries == True:
             self.get_queries()
         else:
-            self.get_nullfree_queries()
+            self.get_nullfree_queries(save_file_path=save_file_path)
 
