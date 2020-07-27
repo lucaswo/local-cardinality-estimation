@@ -5,7 +5,7 @@ import csv
 import time
 
 
-class SQLGenarator:
+class SQLGenerator:
     '''
     Class for generating SQL queries. Uses Meta Information from MetaCollector Step before.
     '''
@@ -47,7 +47,13 @@ class SQLGenarator:
                 raise ValueError('There are tables to join but no join attributes are given!')
 
     def write_sql(self, queries: List[Tuple[int, str]], file: str):
-        with open('../../assets/%s.sql' % (file), 'w+') as file:
+        '''
+        Function for writing a human readable sql file with the generated queries
+        :param queries: list of queries, containing querySetID and query as tuple
+        :param file: file name for sql file
+        :return:
+        '''
+        with open('%s.sql' % (file), 'w+') as file:
             for q in queries:
                 file.write(q[1] + '\n')
 
@@ -108,7 +114,7 @@ class SQLGenarator:
         all_queries = []
         header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step']
 
-        with open('../../assets/%s.csv' % (save_readable), 'w') as file:
+        with open('%s.csv' % (save_readable), 'w') as file:
             writer = csv.DictWriter(file, delimiter=';', fieldnames=header)
             writer.writeheader()
 
@@ -131,7 +137,6 @@ class SQLGenarator:
                 min_max = [m[3] for m in value['columns']]
                 max_card = value['max_card'][0]
 
-                # TODO: value type of join attributes at the moment Null if there is no join. because of iteration is empty list needed. Changeable in meta_collector?--> IF YES, JUST DELETE next 2 lines
                 if value['join_attributes'] == None:
                     value['join_attributes'] == []
 
@@ -167,4 +172,3 @@ class SQLGenarator:
         end = time.time()
         print('Generating %d queries needed' % (qnumber), '{:5.3f}s'.format(end - start))
         return queries
-

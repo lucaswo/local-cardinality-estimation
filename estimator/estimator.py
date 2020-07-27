@@ -2,6 +2,7 @@ from typing import Dict, Any, Union
 
 import numpy as np
 import yaml
+from keras import backend as K
 from keras.callbacks import History
 from keras.layers import Dense, Input, Dropout
 from keras.models import Model, load_model
@@ -21,10 +22,12 @@ class Estimator:
     training_data: Dict[str, np.ndarray] = {"x": None, "y": None, "postgres_estimate": None}
     test_data: Dict[str, np.ndarray] = {"x": None, "y": None, "postgres_estimate": None}
 
+    max_card: int = None
+
     model: Model = None
 
-    def __init__(self, config: Dict[str, Any] = None, config_file_path: str = "config.yaml",
-                 data: Dict[str, np.ndarray] = None, model: Model = None, model_path: str = None, debug: bool = True):
+    def __init__(self, config: Dict[str, Any] = None, config_file_path: str = "config.yaml", data: np.ndarray = None,
+                 model: Model = None, model_path: str = None, debug: bool = True):
         """
         Initializer for the Estimator.
 
@@ -71,7 +74,7 @@ class Estimator:
             if debug:
                 print("Initialized Estimator with {}".format(config))
 
-        self.data = data
+        self.set_data(loaded_data=data)
 
     def get_model(self, len_input: int, override: bool = False) -> Model:
         """
@@ -118,7 +121,38 @@ class Estimator:
 
         self.model = load_model(model_path)
 
+    @staticmethod
+    def denormalize(y, y_min: float, y_max: float):
+        """
+        :param y: tensor filled with values to denormalize
+        :param y_min: minimum value for y
+        :param y_max: maximum value for y
+        :return: tensor with denormalized values
+        """
+
+        return K.exp(y * (y_max - y_min) + y_min)
+
+    @staticmethod
+    def denormalize_np(y: np.ndarray, y_min: float, y_max: float) -> np.ndarray:
+        """
+        :param y: numpy-array filled with values to denormalize
+        :param y_min: minimum value for y
+        :param y_max: maximum value for y
+        :return: numpy-array with denormalized values
+        """
+
+        return np.exp(y * (y_max - y_min) + y_min)
+
+    def q_loss(self, y_true, y_pred):
+        y_true = self.denormalize(y_true, 0, self.max_card)
+        y_pred = self.denormalize(y_pred, 0, self.max_card)
+
+        return K.maximum(y_true, y_pred) / K.minimum(y_true, y_pred)
+
     def q_loss_np(self, y_true, y_pred) -> np.ndarray:
+        y_true = self.denormalize_np(y_true, 0, self.max_card)
+        y_pred = self.denormalize_np(y_pred, 0, self.max_card)
+
         return np.maximum(y_true, y_pred) / np.minimum(y_true, y_pred)
 
     def load_data_file(self, file_path: str, override: bool = False) -> Dict[str, np.ndarray]:
@@ -130,13 +164,12 @@ class Estimator:
         :return: The data which is set for the Estimator.
         """
 
-        if self.data and not override and "x" in self.data and self.data["x"] is not None and "y" in self.data and \
-                self.data["y"] is not None:
+        if self.data is not None and not override and "x" in self.data and self.data[
+            "x"] is not None and "y" in self.data and self.data["y"] is not None:
             print("You already have loaded data. Please use override=True as parameter when you want to override this"
                   " data.")
             return self.data
 
-        data: Dict[str, np.ndarray] = {}
         if file_path.split(".")[-1] == "csv":
             loaded_data = np.genfromtxt(file_path, delimiter=",")
         elif file_path.split(".")[-1] == "npy":
@@ -145,27 +178,15 @@ class Estimator:
             raise FileNotFoundError("No file found with path {}! Be sure to use a correct relative or an absolute path."
                                     .format(file_path))
 
-        if loaded_data.shape[1] % 4 == 1:
-            data["x"] = np.delete(loaded_data, -1, 1)
-        elif loaded_data.shape[1] % 4 == 2:
-            data["postgres_estimate"] = loaded_data[:, -2]
-            data["x"] = np.delete(loaded_data, np.s_[-2:], 1)
-        elif loaded_data.shape[1] % 4 == 3:
-            data["postgres_estimate"] = loaded_data[:, -2]
-            data["x"] = np.delete(loaded_data, np.s_[-3:], 1)
+        self.set_data(loaded_data=loaded_data, override=override)
 
-        data["y"] = loaded_data[:, -1]
+        return loaded_data
 
-        self.set_data(data, override)
-
-        return self.data
-
-    def set_data(self, data: Dict[str, np.ndarray], override: bool = False):
+    def set_data(self, loaded_data: np.ndarray, override: bool = False):
         """
-        Method for setting data and dependent values like max_card and input_length. This includes a normalization of
-        the true cardinalities
+        Method for setting data and dependent values like max_card and input_length.
 
-        :param data: Dictionary which must at least contain keys "x" and "y" and as values np.ndarray for each.
+        :param loaded_data: The data loaded from the file.
         :param override: Boolean whether to override already existing data.
         """
 
@@ -175,14 +196,25 @@ class Estimator:
                   " data.")
             return self.data
 
-        if data is None or "x" not in data or data["x"] is None or "y" not in data or data["y"] is None:
-            raise KeyError("The given parameter data doesn't contain the data as expected.")
+        data: Dict[str, np.ndarray] = {}
+        if loaded_data.shape[1] % 4 == 1:
+            data["x"] = np.delete(loaded_data, -1, 1)
+        elif loaded_data.shape[1] % 4 == 2:
+            self.max_card = np.log(loaded_data[:, -2][0])
+            data["x"] = np.delete(loaded_data, np.s_[-2:], 1)
+        elif loaded_data.shape[1] % 4 == 3:
+            data["postgres_estimate"] = loaded_data[:, -2]
+            self.max_card = np.log(loaded_data[:, -3][0])
+            data["x"] = np.delete(loaded_data, np.s_[-3:], 1)
+
+        if not self.max_card:
+            raise ValueError("Missing maximal cardinality in the data. See documentation for details.")
+
+        data["y"] = loaded_data[:, -1]
 
         self.data = data
 
         self.input_length = len(self.data["x"][0])
-
-        self.data["y"] = self.data["y"]
 
     def split_data(self, split: float = 0.9):
         """
@@ -288,10 +320,10 @@ class Estimator:
         :return: A numpy.ndarray containing the calculated q-error.
         """
 
-        if data_file_path:
+        if data_file_path is not None:
             self.load_data_file(data_file_path)
         self.split_data()
-        self.get_model(self.input_length, override=override_model)
+        self.get_model(len_input=self.input_length, override=override_model)
         history = self.train(epochs=epochs, verbose=verbose, shuffle=shuffle, batch_size=batch_size,
                              validation_split=validation_split)
         predictions = self.test()

@@ -130,20 +130,15 @@ class PostgresEvaluator:
         execute the given queries against the database and calculate the true cardinality from each query
         :return: void
         """
-
         for query_as_dict in self.query_data:
-            query_as_dict['true_cardinality'] = 42
-
-
-        # for query_as_dict in self.query_data:
-        #     if self.debug:
-        #         print("Executing: {}".format(query_as_dict['query']))
-        #     self.cur.execute(query_as_dict['query'])
-        #     output = self.cur.fetchone()
-        #     true_cardi = output[0]
-        #     if self.debug:
-        #         print("true cardinality ('count(*)'): {}".format(true_cardi))
-        #     query_as_dict['true_cardinality'] = true_cardi
+            if self.debug:
+                 print("Executing: {}".format(query_as_dict['query']))
+            self.cur.execute(query_as_dict['query'])
+            output = self.cur.fetchone()
+            true_cardi = output[0]
+            if self.debug:
+                print("true cardinality ('count(*)'): {}".format(true_cardi))
+            query_as_dict['true_cardinality'] = true_cardi
 
     def get_estimated_cardinalities(self):
         """

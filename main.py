@@ -1,3 +1,5 @@
+import numpy as np
+
 from crawler import Crawler
 from estimator import Estimator
 from meta_collector import MetaCollector
@@ -15,16 +17,28 @@ def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
     mc.get_meta_from_file(file_path=file_path, save_file_path=save_file_path)
 
 
-def vectorize(queries_with_cardinalities_csv_path: str, output_folder_path: str, filename: str):
-    vectorizer = Vectorizer(4)
+def vectorize(queries_with_cardinalities_csv_path: str, output_file_path: str, filetype: str):
+    vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities(queries_with_cardinalities_csv_path)
     vectorizer.vectorize()
-    vectorizer.save(output_folder_path, filename)
+    vectorizer.save(output_file_path, filetype)
 
 
 def estimate(data_file_path: str, config_file_path: str, save_model_file_path: str):
-    estimator = Estimator(config_file_path=config_file_path)
-    estimator.run(data_file_path=data_file_path, save_model_file_path=save_model_file_path)
+    loaded_data = []
+    if data_file_path.split(".")[-1] == "csv":
+        loaded_data = np.genfromtxt(data_file_path, delimiter=",")
+    elif data_file_path.split(".")[-1] == "npy":
+        loaded_data = np.load(data_file_path)
+
+    query_set_ids = set([x.astype(int) for x in loaded_data[:, 0]])
+
+    for query_set_id in query_set_ids:
+        data = loaded_data[np.where(loaded_data[:, 0].astype(int) == query_set_id)]
+        data = data[:, 1:]
+
+        estimator = Estimator(config_file_path=config_file_path, data=data)
+        estimator.run(save_model_file_path=save_model_file_path + "_{}".format(query_set_id))
 
 def communicate(file_path:str,query_number:int,nullqueries:bool):
     communicator = QueryCommunicator(file_path,query_number,nullqueries)
@@ -34,6 +48,5 @@ if __name__ == "__main__":
     crawl("assets/job-light.sql", "assets/solution_dict")
     collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config.yaml",
                  save_file_path="assets/meta_information")
-    communicate(file_path='assets/meta_information.yaml',query_number=50,nullqueries=False)
-    vectorize("assets/queries_with_cardinalities.csv", "/mnt/data/programming/tmp/", "main_py_test")
+    vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
     estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")

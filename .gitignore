@@ -157,8 +157,6 @@ gen
 vectorizer/*.yaml
 vectorizer/*.csv
 /meta-collector/meta_information.yaml
-
-# Mac OS specific Files
-.DS_Store
 docs
+.vscode
 
