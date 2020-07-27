@@ -6,6 +6,8 @@ import psycopg2 as postgres
 import yaml
 from sklearn.preprocessing import LabelEncoder
 
+import os.path
+
 
 class CreationMode(Enum):
     """
