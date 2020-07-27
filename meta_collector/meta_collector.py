@@ -1,3 +1,5 @@
+import os.path
+from enum import Enum
 from typing import List, Tuple, Dict
 
 import psycopg2 as postgres
@@ -5,6 +7,18 @@ import yaml
 from sklearn.preprocessing import LabelEncoder
 
 import os.path
+
+
+class CreationMode(Enum):
+    """
+    Enum for the different possibilities to use the MetaCollector.
+
+    0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
+    """
+
+    NONE = 0
+    TEMPORARY = 1
+    PERMANENT = 2
 
 
 class MetaCollector:
@@ -24,7 +38,7 @@ class MetaCollector:
 
     debug: bool = None
 
-    def __init__(self, config: dict = None, debug: bool = True):
+    def __init__(self, config: dict = None, config_file_path: str = "config.yaml", debug: bool = True):
         """
         Initializer for the MetaCollector
 
@@ -35,11 +49,12 @@ class MetaCollector:
         :param config: if given: it has to be a dictionary with at least db_name, user and password and optionally host
             and port (default to host: localhost, port: 5432 if not given)
             if not given: the config file 'config.yaml' is used for these settings
+        :param config_file_path: path for the config-file -> only necessary if no config is given
         :param debug: boolean whether to print additional information while processing
         """
 
         if config is None:
-            with open("config.yaml") as file:
+            with open(config_file_path) as file:
                 config = yaml.safe_load(file)
 
         if config["db_name"] is None or config["db_name"] == "":
@@ -90,7 +105,8 @@ class MetaCollector:
             self.conn.close()
 
     def setup_view(self, table_names: List[str or Tuple[str, str]], columns: List[str],
-                   join_atts: List[str or Tuple[str, str]] = None, cube: bool = False, mode: int = 0) -> (
+                   join_atts: List[str or Tuple[str, str]] = None, cube: bool = False,
+                   mode: CreationMode = CreationMode.NONE) -> (
             List[Tuple[str, str]], int):
         """
         Create the tables tmpview and if cube==True also tmpview_cube containing the metadata for the given tables
@@ -103,7 +119,7 @@ class MetaCollector:
             join the tables on. -> is optional, because there is no join if there is only one table and so there would
             be no join-attribute needed in that case
         :param cube: boolean whether to create the *_cube table, too
-        :param mode: 0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
+        :param mode: see CreationMode-Enum
         :return: first: a list of tuples containing the name and the datatype for the columns, each as string
             second: the maximal cardinality as integer
         """
@@ -112,7 +128,7 @@ class MetaCollector:
             raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
                                   "'open_database_connection' before this method.")
 
-        if mode == 1:
+        if mode == CreationMode.TEMPORARY:
             # drops maybe already existing tables with metadata
             sql = """DROP TABLE IF EXISTS tmpview; DROP TABLE IF EXISTS tmpview_cube;"""
             self.execute_sql(sql)
@@ -162,13 +178,13 @@ class MetaCollector:
                 attributes_string = " AND ".join(["t{}.{} = t{}.{}".format(1, join[0], i + 2, join[1]) for i, join in
                                                   enumerate(join_atts)])
 
-            if mode == 0:
+            if mode == CreationMode.NONE:
                 sql = """ SELECT COUNT(*) FROM {} WHERE {} """.format(tables_string, attributes_string)
-            elif mode == 1:
+            elif mode == CreationMode.TEMPORARY:
                 new_table_name = "tmpview"
                 sql = """CREATE TABLE {} AS (SELECT {} FROM {} WHERE {});""".format(new_table_name, columns_string,
                                                                                     tables_string, attributes_string)
-            elif mode == 2:
+            elif mode == CreationMode.PERMANENT:
                 new_table_name = "tmpview_{}".format("_".join(table[0] for table in table_names))
                 sql = """CREATE TABLE IF NOT EXISTS {} AS (SELECT {} FROM {} WHERE {});""".format(new_table_name,
                                                                                                   columns_string,
@@ -180,20 +196,20 @@ class MetaCollector:
             columns_string = ",".join(["coalesce({col},'-1') AS {col}".format(col=col[0]) if "character" in col[2]
                                        else "{col}".format(col=col[0]) for col in columns_types])
 
-            if mode == 0:
+            if mode == CreationMode.NONE:
                 sql = """ SELECT COUNT(*) FROM {} """.format(table_names[0])
-            elif mode == 1:
+            elif mode == CreationMode.TEMPORARY:
                 new_table_name = "tmpview"
                 sql = """CREATE TABLE {} AS (SELECT {} FROM {});""".format(new_table_name, columns_string,
                                                                            table_names[0])
-            elif mode == 2:
+            elif mode == CreationMode.PERMANENT:
                 new_table_name = "tmpview_{}".format(table_names[0])
                 sql = """CREATE TABLE IF NOT EXISTS {} AS (SELECT {} FROM {});""".format(new_table_name, columns_string,
                                                                                          table_names[0])
             else:
                 raise ValueError("Invalid mode selected. There are only 0, 1 or 2 as modes available!")
 
-        if mode == 1 or mode == 2:
+        if mode == CreationMode.TEMPORARY or mode == CreationMode.PERMANENT:
             # self.execute_sql(sql)
             # sql = """ANALYZE {};""".format(new_table_name)
             self.execute_sql(sql)
@@ -281,7 +297,7 @@ class MetaCollector:
 
     def get_meta(self, table_names: List[str or Tuple[str, str]], columns: List[str],
                  join_atts: List[str or Tuple[str, str]] = None, save: bool = True, save_file_name: str = None,
-                 batchmode: bool = False, mode: int = 0) -> Dict:
+                 batchmode: bool = False, mode: CreationMode = CreationMode.NONE) -> Dict:
         """
         Method for the whole process of collecting the meta-information for the given tables joined on the given
         attributes and projected on the given columns.
@@ -296,7 +312,7 @@ class MetaCollector:
         :param save_file_name: name for the save-file for the meta_information -> not needed if save==False
         :param batchmode: whether the meta data is collected in batches or not -> connection to db held open if batch
             mode
-        :param mode: 0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
+        :param mode: see CreationMode-Enum
         :return: dictionary containing the meta-information
         """
 
@@ -331,24 +347,24 @@ class MetaCollector:
 
         return result_dict
 
-    def get_meta_from_file(self, file_path: str, save: bool = True, save_file_name: str = None, mode: int = 0,
-                           override: bool = True) -> Dict[int, any]:
+    def get_meta_from_file(self, file_path: str, save: bool = True, save_file_path: str = None,
+                           mode: CreationMode = CreationMode.NONE, override: bool = True) -> Dict[int, any]:
         """
         Method for collecting meta data for the information given in a file from Crawler or at least a file formatted
         like this.
 
         :param file_path: Path to the file. Format has to be the same like the output of Crawler
         :param save: Whether to save the information to file or not. -> It is recommended to do so.
-        :param save_file_name: Optional name for the file.
-        :param mode: 0 -> don't create table, 1 -> create temporary table, 2 -> create permanent table
+        :param save_file_path: Optional path for the file.
+        :param mode: see CreationMode-Enum
         :param override: Whether to override an already existing meta_information file.
         :return: The solution dict.
         """
 
         if override:
-            if save_file_name:
-                if os.path.isfile(save_file_name + ".yaml"):
-                    os.remove(save_file_name + ".yaml")
+            if save_file_path:
+                if os.path.isfile(save_file_path + ".yaml"):
+                    os.remove(save_file_path + ".yaml")
             else:
                 if os.path.isfile("meta_information.yaml"):
                     os.remove("meta_information.yaml")
@@ -367,8 +383,8 @@ class MetaCollector:
                                                   save=False, batchmode=True, mode=mode)}
 
             if save:
-                if save_file_name:
-                    self.save_meta(solution_dict, save_file_name, mode="a+")
+                if save_file_path:
+                    self.save_meta(solution_dict, save_file_path, mode="a+")
                 else:
                     self.save_meta(solution_dict, mode="a+")
 
@@ -407,10 +423,3 @@ class MetaCollector:
         if self.debug:
             print("Executing: {}".format(sql_string))
         self.cur.execute(sql_string)
-
-
-mc = MetaCollector()
-# example which should work -> takes quite a while to be processed
-# mc.get_meta(["title", "cast_info"], ["kind_id", "person_id", "role_id"], [("id", "movie_id")])
-
-mc.get_meta_from_file("../crawler/solution_dict.yaml")
