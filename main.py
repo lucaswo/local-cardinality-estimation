@@ -44,14 +44,21 @@ def estimate(data_file_path: str, config_file_path: str, save_model_file_path: s
         estimator = Estimator(config_file_path=config_file_path, data=data)
         estimator.run(save_model_file_path=save_model_file_path + "_{}".format(query_set_id))
 
-def communicate(input_file_path:str,query_number:int,nullqueries:bool,save_file_path:str):
+
+def communicate(input_file_path: str, query_number: int, nullqueries: bool, save_file_path: str, config_file_path: str):
+    db_conn = DatabaseConnector()
+    db_conn.connect(database=Database.MARIADB, config_file_path=config_file_path)
     communicator = QueryCommunicator(meta_file_path=input_file_path)
-    communicator.produce_queries(query_number=query_number,nullqueries=nullqueries,save_file_path=save_file_path)
+    communicator.produce_queries(query_number=query_number, nullqueries=nullqueries, save_file_path=save_file_path,
+                                 database_connector=db_conn)
+    db_conn.close_database_connection()
+
 
 if __name__ == "__main__":
     crawl("assets/job-light.sql", "assets/solution_dict")
     collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config.yaml",
                  save_file_path="assets/meta_information")
-    communicate(input_file_path='assets/meta_information.yaml',query_number=20,nullqueries=False,save_file_path='assets/fin_queries_with_cardinalities.csv')
+    communicate(input_file_path='assets/meta_information.yaml', query_number=20, nullqueries=False,
+                save_file_path='assets/fin_queries_with_cardinalities.csv', config_file_path="meta_collector/config_postgres.yaml")
     vectorize("assets/fin_queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
     estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")

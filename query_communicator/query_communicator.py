@@ -3,8 +3,7 @@ from sql_generator import SQLGenerator
 import csv
 import numpy as np
 from typing import Tuple, Dict, List
-
-
+from database_connector import DatabaseConnector
 
 
 class QueryCommunicator():
@@ -21,8 +20,7 @@ class QueryCommunicator():
     def __init__(self, meta_file_path: str = '../assets/meta_information.yaml'):
         self.meta = meta_file_path
 
-
-    def get_queries(self, query_number:int = 10) -> str:
+    def get_queries(self, query_number: int = 10, database_connector: DatabaseConnector) -> str:
         '''
         Function for generating queries and their cardinalities if nullqueries are allowed.
         Saves generated queries in ../assets/queries_with_cardinalities.csv
@@ -32,11 +30,11 @@ class QueryCommunicator():
         print("generate ", query_number, " queries")
         generator.generate_queries(qnumber=query_number, save_readable='../assets/null_including_queries')
 
-        #TODO: save file path as parameter in evaluator, so save file path can be passed trough
-        evaluator = PostgresEvaluator(input_file_name='null_including_queries.csv')
+        # TODO: save file path as parameter in evaluator, so save file path can be passed trough
+        evaluator = PostgresEvaluator(input_file_name='null_including_queries.csv', database_connector=database_connector)
         evaluator.get_cardinalities()
 
-    def get_nullfree_queries(self,query_number:int,save_file_path: str):
+    def get_nullfree_queries(self, query_number: int, save_file_path: str, database_connector: DatabaseConnector):
         '''
         Function that generates given number queries and their cardinalities which are not zero.
         There will be less queries then requested, if unavoidable.
@@ -51,7 +49,7 @@ class QueryCommunicator():
         generator = SQLGenerator(config=self.meta)
         generator.generate_queries(qnumber=query_number_with_buffer, save_readable='../assets/nullfree_queries')
 
-        evaluator = PostgresEvaluator(input_file_name='nullfree_queries.csv')
+        evaluator = PostgresEvaluator(input_file_name='nullfree_queries.csv', database_connector=database_connector)
         evaluator.get_cardinalities()
         reduced_queries = self.reduce_queries(query_number=query_number)
 
@@ -59,7 +57,7 @@ class QueryCommunicator():
 
         return reduced_queries
 
-    def reduce_queries(self,query_number):
+    def reduce_queries(self, query_number):
         '''
         Reduces genrated queries to the requested number of queries
         :return:DataFrame with reduced query sets
@@ -98,7 +96,9 @@ class QueryCommunicator():
             for q in queries:
                 writer.writerow(q)
 
-    def produce_queries(self, query_number: int = 10, nullqueries: bool = False, save_file_path:str = '../assets/reduced_queries_with_cardinalities.csv'):
+    def produce_queries(self, query_number: int = 10, nullqueries: bool = False,
+                        save_file_path: str = '../assets/reduced_queries_with_cardinalities.csv',
+                        database_connector: DatabaseConnector):
         '''
         Main function to produce the queries and return the correct csv file,
         depending if nullqueries are wanted or not
@@ -109,7 +109,7 @@ class QueryCommunicator():
         :return:
         '''
         if nullqueries == True:
-            self.get_queries(query_number=query_number)
+            self.get_queries(query_number=query_number, database_connector=database_connector)
         else:
-            self.get_nullfree_queries(save_file_path=save_file_path,query_number=query_number)
-
+            self.get_nullfree_queries(save_file_path=save_file_path, query_number=query_number,
+                                      database_connector=database_connector)
