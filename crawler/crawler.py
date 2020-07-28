@@ -133,7 +133,7 @@ class Crawler:
     @staticmethod
     def table_name_unpacker(from_string: str) -> List[Tuple[str, str]]:
         """
-        Takes the sorted string of the from clause and extracts the tables with there aliases.
+        Takes the sorted string of the from clause and extracts the tables with their aliases.
 
         :param from_string: Alphabetical ordered string containing all tables to join, separated by ','.
         :return: List of tuples where the first element of the tuple is the table name and the second one is the alias.

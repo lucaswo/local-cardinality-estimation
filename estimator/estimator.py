@@ -26,8 +26,8 @@ class Estimator:
 
     model: Model = None
 
-    def __init__(self, config: Dict[str, Any] = None, config_file_path: str = "config.yaml",
-                 data: Dict[str, np.ndarray] = None, model: Model = None, model_path: str = None, debug: bool = True):
+    def __init__(self, config: Dict[str, Any] = None, config_file_path: str = "config.yaml", data: np.ndarray = None,
+                 model: Model = None, model_path: str = None, debug: bool = True):
         """
         Initializer for the Estimator.
 
@@ -74,7 +74,7 @@ class Estimator:
             if debug:
                 print("Initialized Estimator with {}".format(config))
 
-        self.data = data
+        self.set_data(loaded_data=data)
 
     def get_model(self, len_input: int, override: bool = False) -> Model:
         """
@@ -164,13 +164,12 @@ class Estimator:
         :return: The data which is set for the Estimator.
         """
 
-        if self.data and not override and "x" in self.data and self.data["x"] is not None and "y" in self.data and \
-                self.data["y"] is not None:
+        if self.data is not None and not override and "x" in self.data and self.data[
+            "x"] is not None and "y" in self.data and self.data["y"] is not None:
             print("You already have loaded data. Please use override=True as parameter when you want to override this"
                   " data.")
             return self.data
 
-        data: Dict[str, np.ndarray] = {}
         if file_path.split(".")[-1] == "csv":
             loaded_data = np.genfromtxt(file_path, delimiter=",")
         elif file_path.split(".")[-1] == "npy":
@@ -179,6 +178,25 @@ class Estimator:
             raise FileNotFoundError("No file found with path {}! Be sure to use a correct relative or an absolute path."
                                     .format(file_path))
 
+        self.set_data(loaded_data=loaded_data, override=override)
+
+        return loaded_data
+
+    def set_data(self, loaded_data: np.ndarray, override: bool = False):
+        """
+        Method for setting data and dependent values like max_card and input_length.
+
+        :param loaded_data: The data loaded from the file.
+        :param override: Boolean whether to override already existing data.
+        """
+
+        if self.data and not override and "x" in self.data and self.data["x"] is not None and "y" in self.data and \
+                self.data["y"] is not None:
+            print("You already have loaded data. Please use override=True as parameter when you want to override this"
+                  " data.")
+            return self.data
+
+        data: Dict[str, np.ndarray] = {}
         if loaded_data.shape[1] % 4 == 1:
             data["x"] = np.delete(loaded_data, -1, 1)
         elif loaded_data.shape[1] % 4 == 2:
@@ -194,33 +212,9 @@ class Estimator:
 
         data["y"] = loaded_data[:, -1]
 
-        self.set_data(data, override)
-
-        return self.data
-
-    def set_data(self, data: Dict[str, np.ndarray], override: bool = False):
-        """
-        Method for setting data and dependent values like max_card and input_length. This includes a normalization of
-        the true cardinalities
-
-        :param data: Dictionary which must at least contain keys "x" and "y" and as values np.ndarray for each.
-        :param override: Boolean whether to override already existing data.
-        """
-
-        if self.data and not override and "x" in self.data and self.data["x"] is not None and "y" in self.data and \
-                self.data["y"] is not None:
-            print("You already have loaded data. Please use override=True as parameter when you want to override this"
-                  " data.")
-            return self.data
-
-        if data is None or "x" not in data or data["x"] is None or "y" not in data or data["y"] is None:
-            raise KeyError("The given parameter data doesn't contain the data as expected.")
-
         self.data = data
 
         self.input_length = len(self.data["x"][0])
-
-        self.data["y"] = self.data["y"]
 
     def split_data(self, split: float = 0.9):
         """
@@ -326,7 +320,7 @@ class Estimator:
         :return: A numpy.ndarray containing the calculated q-error.
         """
 
-        if data_file_path:
+        if data_file_path is not None:
             self.load_data_file(data_file_path)
         self.split_data()
         self.get_model(len_input=self.input_length, override=override_model)
@@ -353,7 +347,3 @@ class Estimator:
             self.model.save("{}.h5".format(filename))
         else:
             raise ValueError("No model for saving defined!")
-
-
-est = Estimator()
-est.run(data_file_path="../assets/queries_with_cardinalites_vectors.csv")
