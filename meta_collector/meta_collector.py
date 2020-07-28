@@ -77,7 +77,7 @@ class MetaCollector:
             column_type = self.db_conn.fetchall()
 
             for index, column in enumerate(column_type):
-                if column[1] == "int": column = (column[0], "integer")
+                if column[1] == "int" or column[1] == "bigint": column = (column[0], "integer")
                 if isinstance(table_name, list) or isinstance(table_name, tuple):
                     min_max_step, encoders = self.collect_min_max_step(table_name[0], (column[0], column[1]))
                     columns_types.append((column[0], table_name[1], column[1], min_max_step, encoders,
