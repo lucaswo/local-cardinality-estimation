@@ -153,11 +153,9 @@ class PostgresEvaluator:
         function that manage the whole process of cardinality estimation/calculation
         :return: void
         """
-        self.open_database_connection()
         self.get_estimated_cardinalities()
         self.get_true_cardinalities()
         self.save_cardinalities()
-        self.close_database_connection()
 
 if __name__ == "__main__":
     pc = PostgresEvaluator()

@@ -71,12 +71,12 @@ class QueryCommunicator():
             reduced_queries.append(queries[0].tolist())
         for id in setIDs:
             query_n = np.where(queries[:, 0] == id)
-            if len(query_n) > query_number:
-                query_n = query_n[query_number]
+            if query_n[0].size > query_number:
+                #query_n = query_n[query_number]
                 rq = [queries.tolist()[i] for i in query_n[0].tolist()]
-                for q in rq:
+                for q in rq[:query_number]:
                     reduced_queries.append(q)
-                print('%d queries have been generated for query set %d!' % (len(query_n[0]), int(id)))
+                print('%d queries have been generated for query set %d!' % (query_number, int(id)))
             else:
                 rq = [queries.tolist()[i] for i in query_n[0].tolist()]
                 for q in rq:
@@ -114,8 +114,3 @@ class QueryCommunicator():
         else:
             self.get_nullfree_queries(save_file_path=save_file_path, query_number=query_number,
                                       database_connector=database_connector)
-
-db = DatabaseConnector('postgres')
-con = DatabaseConnector(database=db)
-com = QueryCommunicator()
-com.produce_queries(database_connector=con)
