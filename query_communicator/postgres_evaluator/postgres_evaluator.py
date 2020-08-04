@@ -14,7 +14,7 @@ class PostgresEvaluator:
     db_conn: DatabaseConnector = None
     debug: bool = None
 
-    def __init__(self, debug: bool = True, input_file_name: str = 'queries.csv', database_connector: DatabaseConnector):
+    def __init__(self, database_connector: DatabaseConnector, debug: bool = True, input_file_name: str = 'queries.csv'):
         """
         Initializer for the PostgresEvaluator
 

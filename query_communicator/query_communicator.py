@@ -4,6 +4,7 @@ import csv
 import numpy as np
 from typing import Tuple, Dict, List
 from database_connector import DatabaseConnector
+from database_connector import Database
 
 
 class QueryCommunicator():
@@ -20,7 +21,7 @@ class QueryCommunicator():
     def __init__(self, meta_file_path: str = '../assets/meta_information.yaml'):
         self.meta = meta_file_path
 
-    def get_queries(self, query_number: int = 10, database_connector: DatabaseConnector) -> str:
+    def get_queries(self,database_connector: DatabaseConnector, query_number: int = 10) -> str:
         '''
         Function for generating queries and their cardinalities if nullqueries are allowed.
         Saves generated queries in ../assets/queries_with_cardinalities.csv
@@ -96,9 +97,8 @@ class QueryCommunicator():
             for q in queries:
                 writer.writerow(q)
 
-    def produce_queries(self, query_number: int = 10, nullqueries: bool = False,
-                        save_file_path: str = '../assets/reduced_queries_with_cardinalities.csv',
-                        database_connector: DatabaseConnector):
+    def produce_queries(self, database_connector: DatabaseConnector, query_number: int = 10, nullqueries: bool = False,
+                        save_file_path: str = '../assets/reduced_queries_with_cardinalities.csv'):
         '''
         Main function to produce the queries and return the correct csv file,
         depending if nullqueries are wanted or not
@@ -106,6 +106,7 @@ class QueryCommunicator():
         :param meta: meta information, needed to generate queries
         :param nullqueries: decide whether to generate nullqueries or not, default: no nullqueries
         :param query_number: count of queries that are generated per meta file entry
+        :param database_connector: Connector for the database connection, depending on the database system you are using
         :return:
         '''
         if nullqueries == True:
@@ -113,3 +114,8 @@ class QueryCommunicator():
         else:
             self.get_nullfree_queries(save_file_path=save_file_path, query_number=query_number,
                                       database_connector=database_connector)
+
+db = DatabaseConnector('postgres')
+con = DatabaseConnector(database=db)
+com = QueryCommunicator()
+com.produce_queries(database_connector=con)
