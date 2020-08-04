@@ -37,8 +37,18 @@ class DatabaseConnector:
         self.debug = debug
         self.database = database
 
-    def connect(self, config: Dict = None, config_file_path: str = None,
-                sqlite_file_path: str = None):
+    def connect(self, config: Dict = None, config_file_path: str = None, sqlite_file_path: str = None):
+        """
+        Wrapper method for connecting to the selected database.
+
+        :param config: if given: It has to be a dictionary with at least db_name, user and password and optionally
+            host and port (default to host: localhost, port: 5432 if not given) for PostgreSQL or it has to be a
+            dictionary with at least database, user and password and optionally host and port (default to host:
+            localhost, port: 3306 if not given) for MariaDB.
+            if not given: The config file path is needed and used for these settings.
+        :param config_file_path: Path to the config file for PostgreSQL or MariaDB.
+        :param sqlite_file_path: Path to the SQLite database file.
+        """
 
         if (config is None and config_file_path is None and (
                 self.database == Database.POSTGRES or self.database == Database.MARIADB)) or (
@@ -46,14 +56,14 @@ class DatabaseConnector:
             raise ValueError("Please read the documentation. You need to give either config or config_file_path or "
                              "sqlite_file_path!")
 
-        if self.database == Database.NONE:
-            raise ValueError("Database must not be NONE!")
-        elif self.database == Database.POSTGRES:
+        if self.database == Database.POSTGRES:
             self.connect_to_postgres(config=config, config_file_path=config_file_path)
         elif self.database == Database.SQLITE:
             self.connect_to_sqlite(database_file_path=sqlite_file_path)
         elif self.database == Database.MARIADB:
             self.connect_to_mariadb(config=config, config_file_path=config_file_path)
+        else:
+            raise ValueError("No valid database selected!")
 
     def connect_to_postgres(self, config: Dict = None, config_file_path: str = "config.yaml"):
         """
@@ -96,7 +106,7 @@ class DatabaseConnector:
         Connect to the postgres database with the given config.
 
         :param config: if given: it has to be a dictionary with at least db_name, user and password and optionally host
-            and port (default to host: localhost, port: 5432 if not given)
+            and port (default to host: localhost, port: 3306 if not given)
             if not given: the config file 'config.yaml' is used for these settings
         :param config_file_path: path for the config-file -> only necessary if no config is given; needs to point on a
             .yaml/.yml file
@@ -180,6 +190,10 @@ class DatabaseConnector:
         self.cur.execute(sql_string)
 
     def fetchall(self):
+        """
+        Wrapper for fetchall method.
+        """
+
         if not self.cur:
             raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
                                   "'open_database_connection' before this method.")
@@ -187,6 +201,10 @@ class DatabaseConnector:
         return self.cur.fetchall()
 
     def fetchone(self):
+        """
+        Wrapper for fetchone method.
+        """
+
         if not self.cur:
             raise ConnectionError("The database-connection may not have been initialized correctly. Make sure to call "
                                   "'open_database_connection' before this method.")

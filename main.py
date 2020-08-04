@@ -13,8 +13,8 @@ def crawl(file_path: str, save_file_path: str):
 
 
 def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
-    db_conn = DatabaseConnector()
-    db_conn.connect(database=Database.MARIADB, config_file_path=config_file_path)
+    db_conn = DatabaseConnector(database=Database.MARIADB)
+    db_conn.connect(config_file_path=config_file_path)
     mc = MetaCollector(db_conn)
     mc.get_meta_from_file(file_path=file_path, save_file_path=save_file_path)
     db_conn.close_database_connection()
@@ -45,9 +45,9 @@ def estimate(data_file_path: str, config_file_path: str, save_model_file_path: s
 
 
 if __name__ == "__main__":
-    crawl("assets/job-light.sql", "assets/solution_dict")
-    collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config.yaml",
+    # crawl("assets/job-light.sql", "assets/solution_dict")
+    collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_mariadb.yaml",
                  save_file_path="assets/meta_information")
 
-    vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
-    estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
+    # vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
+    # estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
