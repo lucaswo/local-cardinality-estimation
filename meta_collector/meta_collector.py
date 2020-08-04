@@ -357,7 +357,6 @@ class MetaCollector:
             batch = yaml.safe_load(file)
 
         for index in batch:
-            if index != 14: continue
             solution_dict = {index: self.get_meta(table_names=batch[index]["table_names"],
                                                   columns=batch[index]["selection_attributes"],
                                                   join_atts=batch[index]["join_attributes"],
