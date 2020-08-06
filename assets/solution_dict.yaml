@@ -1,11 +1,11 @@
 0:
   join_attributes:
-  - t.id=mi_idx.movie_id
   - t.id=mc.movie_id
+  - t.id=mi_idx.movie_id
   selection_attributes:
-  - t.production_year
   - mc.company_type_id
   - mi_idx.info_type_id
+  - t.production_year
   table_names:
   - - movie_companies
     - mc
@@ -18,9 +18,9 @@
   - t.id=mc.movie_id
   - t.id=mk.movie_id
   selection_attributes:
-  - t.production_year
   - mc.company_type_id
   - mk.keyword_id
+  - t.production_year
   table_names:
   - - movie_companies
     - mc
@@ -57,8 +57,8 @@
     - t
 4:
   join_attributes:
-  - t.id=mi.movie_id
   - t.id=mc.movie_id
+  - t.id=mi.movie_id
   selection_attributes:
   - mc.company_type_id
   - t.production_year
@@ -74,8 +74,8 @@
   - t.id=ci.movie_id
   - t.id=mk.movie_id
   selection_attributes:
-  - t.kind_id
   - mk.keyword_id
+  - t.kind_id
   - t.production_year
   table_names:
   - - cast_info
@@ -110,15 +110,15 @@
     - t
 8:
   join_attributes:
+  - t.id=mc.movie_id
   - t.id=mi.movie_id
   - t.id=mi_idx.movie_id
-  - t.id=mc.movie_id
   selection_attributes:
-  - mi.info_type_id
-  - t.production_year
-  - t.kind_id
   - mc.company_type_id
+  - mi.info_type_id
   - mi_idx.info_type_id
+  - t.kind_id
+  - t.production_year
   table_names:
   - - movie_companies
     - mc
@@ -135,8 +135,8 @@
   - t.id=mk.movie_id
   selection_attributes:
   - mi.info_type_id
-  - t.kind_id
   - mi_idx.info_type_id
+  - t.kind_id
   - t.production_year
   table_names:
   - - movie_info
@@ -149,14 +149,14 @@
     - t
 10:
   join_attributes:
-  - t.id=mi.movie_id
   - t.id=mc.movie_id
+  - t.id=mi.movie_id
   - t.id=mk.movie_id
   selection_attributes:
   - mc.company_type_id
+  - mi.info_type_id
   - mk.keyword_id
   - t.production_year
-  - mi.info_type_id
   table_names:
   - - movie_companies
     - mc
@@ -184,13 +184,13 @@
     - t
 12:
   join_attributes:
-  - t.id=mi.movie_id
   - t.id=ci.movie_id
+  - t.id=mi.movie_id
   - t.id=mi_idx.movie_id
   selection_attributes:
-  - t.production_year
-  - mi_idx.info_type_id
   - mi.info_type_id
+  - mi_idx.info_type_id
+  - t.production_year
   table_names:
   - - cast_info
     - ci
@@ -202,13 +202,13 @@
     - t
 13:
   join_attributes:
-  - t.id=mi.movie_id
   - t.id=ci.movie_id
   - t.id=mc.movie_id
+  - t.id=mi.movie_id
   selection_attributes:
-  - t.production_year
   - ci.role_id
   - mi.info_type_id
+  - t.production_year
   table_names:
   - - cast_info
     - ci
@@ -220,10 +220,10 @@
     - t
 14:
   join_attributes:
+  - t.id=mc.movie_id
   - t.id=mi.movie_id
   - t.id=mi_idx.movie_id
   - t.id=mk.movie_id
-  - t.id=mc.movie_id
   selection_attributes:
   - mi.info_type_id
   - mi_idx.info_type_id
@@ -241,16 +241,16 @@
     - t
 15:
   join_attributes:
-  - t.id=mi.movie_id
   - t.id=ci.movie_id
   - t.id=mc.movie_id
+  - t.id=mi.movie_id
   - t.id=mk.movie_id
   selection_attributes:
+  - ci.role_id
   - mc.company_id
-  - t.production_year
   - mi.info_type_id
   - mk.keyword_id
-  - ci.role_id
+  - t.production_year
   table_names:
   - - cast_info
     - ci
@@ -264,14 +264,14 @@
     - t
 16:
   join_attributes:
-  - t.id=mi.movie_id
   - t.id=ci.movie_id
+  - t.id=mi.movie_id
   - t.id=mi_idx.movie_id
   - t.id=mk.movie_id
   selection_attributes:
-  - t.production_year
-  - mi_idx.info_type_id
   - mi.info_type_id
+  - mi_idx.info_type_id
+  - t.production_year
   table_names:
   - - cast_info
     - ci
@@ -289,8 +289,8 @@
   - t.id=mi_idx.movie_id
   - t.id=mk.movie_id
   selection_attributes:
-  - t.kind_id
   - mi_idx.info_type_id
+  - t.kind_id
   - t.production_year
   table_names:
   - - cast_info

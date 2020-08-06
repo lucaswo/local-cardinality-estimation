@@ -1,6 +1,13 @@
+from enum import Enum
 from typing import Tuple, List, Dict
+import re
 
 import yaml
+
+
+class QueryFormat(Enum):
+    CROSS_PRODUCT = "cp"
+    JOIN_ON = "jo"
 
 
 class QueryParser:
@@ -11,7 +18,8 @@ class QueryParser:
 
     operators = ["<=", "!=", ">=", "=", "<", ">", "IS"]
 
-    def read_file(self, file_path: str, inner_separator: str = None, outer_separator: str = None) \
+    def read_file(self, file_path: str, inner_separator: str = None, outer_separator: str = None,
+                  query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) \
             -> Tuple[Dict, str, str, str]:
         """
         Generic Method for reading the sql statements from a given .sql or a .csv file.
@@ -21,6 +29,7 @@ class QueryParser:
         :param inner_separator: The column separator used in the file. You can use '\t' for .tsv files. -> See
             documentation for details.
         :param outer_separator: The block separator used in the file. -> See documentation for details.
+        :param query_format: The format of the sql query. Look at documentation of QueryFormat for details.
         :return
         """
 
@@ -39,21 +48,26 @@ class QueryParser:
             if outer_separator is None: outer_separator = "#"
             return self.read_csv_file(file_path, inner_separator, outer_separator)
         elif file_type == "sql":
-            return self.read_sql_file(file_path)
+            return self.read_sql_file(file_path, query_format=query_format)
         else:
             raise ValueError("The given file-path points neither to a .csv/.tsv nor a .sql file. Please correct this!")
 
     @staticmethod
-    def read_sql_file(file_path: str) -> Tuple[Dict, str, str, str]:
+    def read_sql_file(file_path: str, query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) \
+            -> Tuple[Dict, str, str, str]:
         """
         Read the sql statements from given sql file.
 
         :param file_path: Path to the file containing the sql statements.
+        :param query_format: The format of the sql query. Look at documentation of QueryFormat for details.
         :return
         """
 
         if not file_path or file_path.split(".")[-1] != "sql":
             raise ValueError("The given file-path doesn't point to a .sql file. Please correct this!")
+
+        if query_format != QueryFormat.CROSS_PRODUCT and query_format != QueryFormat.JOIN_ON:
+            raise ValueError("Incorrect QueryFormat given!")
 
         with open(file_path) as file:
             sql_file = file.read()
@@ -63,19 +77,29 @@ class QueryParser:
         command_dict = {}
 
         for command in sql_commands:
-            command = command.replace("SELECT COUNT(*) FROM ", "")
-            command = command.split("WHERE")
+            command = re.sub(re.escape("SELECT COUNT(*) FROM"), "", command, flags=re.IGNORECASE)
+            command = re.split("WHERE", command, flags=re.IGNORECASE)
             if len(command) > 1 and command[0] and command[1]:
-                tables = command[0].strip().split(",")
+                if query_format == QueryFormat.CROSS_PRODUCT:
+                    tables = command[0].strip().split(",")
+                elif query_format == QueryFormat.JOIN_ON:
+                    join_atts = re.findall(r"\((.*?)\)", command[0])
+                    tables = re.sub(r"\((.*?)\)", "", command[0])
+                    tables = re.sub(re.escape(" INNER JOIN "), ",", tables, flags=re.IGNORECASE)
+                    tables = re.sub(re.escape(" ON "), "", tables, flags=re.IGNORECASE)
+                    tables = [tab.strip() for tab in tables.split(",")]
                 tables.sort()
                 command[0] = ",".join(tables)
                 command[1] = command[1].strip()
                 if command[0] not in command_dict:
                     command_dict[command[0]] = []
 
+                if query_format == QueryFormat.JOIN_ON:
+                    command[1] = " AND ".join(join_atts) + " AND " + command[1]
+
                 command_dict[command[0]].append(command[1])
 
-        return command_dict, "sql", "", ""
+        return command_dict, "sql", ",", ""
 
     @staticmethod
     def read_csv_file(file_path: str, inner_separator: str = ",", outer_separator: str = "#") \
@@ -145,11 +169,13 @@ class QueryParser:
         for key, value in command_dict.items():
             tables = self.table_name_unpacker(key, separator=inner_separator)
             if file_type == "sql":
-                join_attributes, selection_attributes = self.sql_attribute_unpacker(value, len(tables) - 1)
+                join_attributes, selection_attributes = self.sql_attribute_unpacker(value)
             elif file_type == "csv":
                 join_attributes, selection_attributes = self.csv_attribute_unpacker(value, separator=inner_separator)
             else:
                 raise ValueError("Incorrect file type. Only the file types 'csv' and 'sql' are supported!")
+            join_attributes.sort()
+            selection_attributes.sort()
             solution_dict[i] = {"table_names": tables,
                                 "join_attributes": join_attributes,
                                 "selection_attributes": selection_attributes}
@@ -183,14 +209,12 @@ class QueryParser:
 
         return tables
 
-    def sql_attribute_unpacker(self, where_string_list: List[str], amount_join_attributes: int) \
-            -> Tuple[List[str], List[str]]:
+    def sql_attribute_unpacker(self, where_string_list: List[str]) -> Tuple[List[str], List[str]]:
         """
         Unpack the attribute strings from sql-file into sets containing the attributes.
 
         :param where_string_list: A list of strings from the where clauses. These have to be separated into join- and
             selection-attributes.
-        :param amount_join_attributes: The amount of join-attributes. (Number of joining tables -1)
         :return: A tuple containing the list of join-attributes in first and the list of selection-attributes in second
             place.
         """
@@ -202,11 +226,11 @@ class QueryParser:
         selection_attributes_set: set = set()
 
         for where_string in where_string_list:
-            attrs = where_string.split("AND")
+            attrs = re.split(" AND ", where_string, flags=re.IGNORECASE)
 
             for index, attr in enumerate(attrs):
-                if index < amount_join_attributes:
-                    join_attributes_set.add(attrs[index].strip())
+                if re.match(r'.+\s*=\s*[^\d"\']*$', attr):
+                    join_attributes_set.add(attr.strip())
                 else:
                     for operator in self.operators:
                         if operator in attr:
@@ -270,7 +294,8 @@ class QueryParser:
         with open("{}.yaml".format(save_file_path), "w") as file:
             yaml.safe_dump(solution_dict, file)
 
-    def run(self, file_path: str, save_file_path: str, inner_separator: str = None, outer_separator: str = None) \
+    def run(self, file_path: str, save_file_path: str, inner_separator: str = None, outer_separator: str = None,
+            query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) \
             -> Dict[int, Dict[str, List[str or Tuple[str, str]]]]:
         """
         Method for the whole parsing process.
@@ -280,12 +305,17 @@ class QueryParser:
         :param inner_separator: The column separator used in the file. You can use '\t' for .tsv files. -> See
             documentation for details.
         :param outer_separator: The block separator used in the file. -> See documentation for details.
+        :param query_format: The indicator for the format of the .sql query-file. If the given file is not .sql than
+            this is not used.
         :return:
         """
 
+        if query_format is None: query_format = QueryFormat.CROSS_PRODUCT
+
         command_dict, file_type, inner_separator, outer_separator = self.read_file(file_path=file_path,
                                                                                    inner_separator=inner_separator,
-                                                                                   outer_separator=outer_separator)
+                                                                                   outer_separator=outer_separator,
+                                                                                   query_format=query_format)
         solution_dict = self.create_solution_dict(command_dict=command_dict, file_type=file_type,
                                                   inner_separator=inner_separator)
         self.save_solution_dict(solution_dict=solution_dict, save_file_path=save_file_path)

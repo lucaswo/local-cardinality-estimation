@@ -1,16 +1,17 @@
 import numpy as np
 
-from query_parser import QueryParser
+from query_parser import QueryParser, QueryFormat
 from database_connector import DatabaseConnector, Database
 from estimator import Estimator
 from meta_collector import MetaCollector
 from vectorizer import Vectorizer
 
 
-def parse_query_file(file_path: str, save_file_path: str, inner_separator: str = None, outer_separator: str = None):
+def parse_query_file(file_path: str, save_file_path: str, inner_separator: str = None, outer_separator: str = None,
+                     query_format: QueryFormat = None):
     query_parser = QueryParser()
     query_parser.run(file_path=file_path, save_file_path=save_file_path, inner_separator=inner_separator,
-                     outer_separator=outer_separator)
+                     outer_separator=outer_separator, query_format=query_format)
 
 
 def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
