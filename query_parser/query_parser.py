@@ -3,10 +3,10 @@ from typing import Tuple, List, Dict
 import yaml
 
 
-class Crawler:
+class QueryParser:
     """
-    Class for the crawler. This is responsible of reading a given file and return a file containing the aggregated
-    informations of this file.
+    Class for the query_parser. This is responsible of reading a given file and return a file containing the aggregated
+    information of this file.
     """
 
     operators = ["<=", "!=", ">=", "=", "<", ">"]

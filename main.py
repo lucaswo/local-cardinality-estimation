@@ -1,15 +1,15 @@
 import numpy as np
 
-from crawler import Crawler
+from query_parser import QueryParser
 from database_connector import DatabaseConnector, Database
 from estimator import Estimator
 from meta_collector import MetaCollector
 from vectorizer import Vectorizer
 
 
-def crawl(file_path: str, save_file_path: str):
-    crawler = Crawler()
-    crawler.run(file_path=file_path, save_file_path=save_file_path)
+def parse_query_file(file_path: str, save_file_path: str):
+    query_parser = QueryParser()
+    query_parser.run(file_path=file_path, save_file_path=save_file_path)
 
 
 def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
