@@ -9,29 +9,47 @@ class QueryParser:
     information of this file.
     """
 
-    operators = ["<=", "!=", ">=", "=", "<", ">"]
+    operators = ["<=", "!=", ">=", "=", "<", ">", "IS"]
 
-    def read_file(self, file_path: str) -> Tuple[Dict, str]:
+    def read_file(self, file_path: str, inner_separator: str = None, outer_separator: str = None) \
+            -> Tuple[Dict, str, str, str]:
         """
         Generic Method for reading the sql statements from a given .sql or a .csv file.
 
         :param file_path: Path to the file containing the sql statements. This path has to end with .csv or .sql. No
             other file types are supported at the moment.
+        :param inner_separator: The column separator used in the file. You can use '\t' for .tsv files. -> See
+            documentation for details.
+        :param outer_separator: The block separator used in the file. -> See documentation for details.
+        :return
         """
 
-        if file_path and file_path.split(".")[-1] == "csv":
-            return self.read_csv_file(file_path)
-        elif file_path and file_path.split(".")[-1] == "sql":
+        if not file_path:
+            raise ValueError("No file_path was given!")
+
+        file_type = file_path.split(".")[-1]
+
+        if inner_separator is None:
+            if file_type == "csv":
+                inner_separator = ","
+            elif file_type == "tsv":
+                inner_separator = "\t"
+
+        if file_type == "csv" or file_type == "tsv":
+            if outer_separator is None: outer_separator = "#"
+            return self.read_csv_file(file_path, inner_separator, outer_separator)
+        elif file_type == "sql":
             return self.read_sql_file(file_path)
         else:
-            raise ValueError("The given file-path points neither to a .csv nor a .sql file. Please correct this!")
+            raise ValueError("The given file-path points neither to a .csv/.tsv nor a .sql file. Please correct this!")
 
     @staticmethod
-    def read_sql_file(file_path: str) -> Tuple[Dict, str]:
+    def read_sql_file(file_path: str) -> Tuple[Dict, str, str, str]:
         """
         Read the sql statements from given sql file.
 
         :param file_path: Path to the file containing the sql statements.
+        :return
         """
 
         if not file_path or file_path.split(".")[-1] != "sql":
@@ -57,17 +75,25 @@ class QueryParser:
 
                 command_dict[command[0]].append(command[1])
 
-        return command_dict, "sql"
+        return command_dict, "sql", "", ""
 
     @staticmethod
-    def read_csv_file(file_path: str) -> Tuple[Dict, str]:
+    def read_csv_file(file_path: str, inner_separator: str = ",", outer_separator: str = "#") \
+            -> Tuple[Dict, str, str, str]:
         """
         Read the csv formatted sql statements from given file.
 
         :param file_path: Path to the file containing the sql statements formatted as csv.
+        :param inner_separator: The column separator used in the file. You can use '\t' for .tsv files. -> See
+            documentation for details.
+        :param outer_separator: The block separator used in the file. -> See documentation for details.
+        :return
         """
 
-        if not file_path or file_path.split(".")[-1] != "csv":
+        if not file_path:
+            raise ValueError("No file_path was given!")
+
+        if file_path.split(".")[-1] != "csv" and file_path.split(".")[-1] != "tsv":
             raise ValueError("The given file-path doesn't point to a .csv file. Please correct this!")
 
         with open(file_path) as file:
@@ -78,11 +104,11 @@ class QueryParser:
         command_dict = {}
 
         for command in csv_commands:
-            command = command.split("#")
+            command = command.split(outer_separator)
             if len(command) > 2 and command[0] and command[1] and command[2]:
-                tables = command[0].strip().split(",")
+                tables = command[0].strip().split(inner_separator)
                 tables.sort()
-                command[0] = ",".join(tables)
+                command[0] = inner_separator.join(tables)
                 command[1] = command[1].strip()
                 command[2] = command[2].strip()
 
@@ -91,17 +117,19 @@ class QueryParser:
 
                 command_dict[command[0]].append((command[1], command[2]))
 
-        return command_dict, "csv"
+        return command_dict, "csv", inner_separator, outer_separator
 
-    def create_solution_dict(self, command_dict: Dict[str, List[str] or List[Tuple[str, str]]], file_type: str) \
-            -> Dict[int, Dict[str, List[str or Tuple[str, str]]]]:
+    def create_solution_dict(self, command_dict: Dict[str, List[str] or List[Tuple[str, str]]], file_type: str,
+                             inner_separator: str) -> Dict[int, Dict[str, List[str or Tuple[str, str]]]]:
         """
         Method for building the solution dict.
 
         :param command_dict: Dict with a alphabetical sorted string of the joining tables as key and a list of where
             clauses as string if the file type is sql or a list of tuples containing the join-attribute-string in first
             and the selection-attribute-string in second place.
-        :param file_type: String with 'csv' or 'sql' which tells the file type of the read file.
+        :param file_type: String with 'csv'/'tsv' or 'sql' which tells the file type of the read file.
+        :param inner_separator: The column separator used in the file. You can use '\t' for .tsv files. -> See
+            documentation for details.
         :return The solution dict containing 'table_names', 'join_attributes' and 'selection_attributes'.
         """
 
@@ -115,11 +143,11 @@ class QueryParser:
 
         i = 0
         for key, value in command_dict.items():
-            tables = self.table_name_unpacker(key)
+            tables = self.table_name_unpacker(key, separator=inner_separator)
             if file_type == "sql":
                 join_attributes, selection_attributes = self.sql_attribute_unpacker(value, len(tables) - 1)
             elif file_type == "csv":
-                join_attributes, selection_attributes = self.csv_attribute_unpacker(value)
+                join_attributes, selection_attributes = self.csv_attribute_unpacker(value, separator=inner_separator)
             else:
                 raise ValueError("Incorrect file type. Only the file types 'csv' and 'sql' are supported!")
             solution_dict[i] = {"table_names": tables,
@@ -131,11 +159,12 @@ class QueryParser:
         return solution_dict
 
     @staticmethod
-    def table_name_unpacker(from_string: str) -> List[Tuple[str, str]]:
+    def table_name_unpacker(from_string: str, separator: str = ",") -> List[Tuple[str, str]]:
         """
         Takes the sorted string of the from clause and extracts the tables with their aliases.
 
-        :param from_string: Alphabetical ordered string containing all tables to join, separated by ','.
+        :param from_string: Alphabetical ordered string containing all tables to join, separated by the separator.
+        :param separator: The column separator used in the file. You can use '\t' for .tsv files.
         :return: List of tuples where the first element of the tuple is the table name and the second one is the alias.
         """
 
@@ -143,7 +172,7 @@ class QueryParser:
             raise ValueError("The string containing the from clause is missing or empty.")
 
         tables = []
-        table_names = from_string.split(",")
+        table_names = from_string.split(separator)
         for table in table_names:
             table = table.strip()
             table = table.split(" ")
@@ -187,12 +216,14 @@ class QueryParser:
 
         return list(join_attributes_set), list(selection_attributes_set)
 
-    def csv_attribute_unpacker(self, attribute_tuples: List[Tuple[str, str]]) -> Tuple[List[str], List[str]]:
+    def csv_attribute_unpacker(self, attribute_tuples: List[Tuple[str, str]], separator: str = ",") \
+            -> Tuple[List[str], List[str]]:
         """
         Unpack the attribute strings from csv-file into sets containing the attributes.
 
         :param attribute_tuples: A list of tuples of strings where the first string is the string for all
             join-attributes, while the second string contains all selection-attributes.
+        :param separator: The column separator used in the file. You can use '\t' for .tsv files.
         :return: A tuple containing the list of join-attributes in first and the list of selection-attributes in second
             place.
         """
@@ -204,13 +235,13 @@ class QueryParser:
         selection_attributes_set: set = set()
 
         for j_attribute_string, s_attribute_string in attribute_tuples:
-            for j_attribute in j_attribute_string.split(","):
+            for j_attribute in j_attribute_string.split(separator):
                 join_attributes_set.add(j_attribute.strip())
 
             for operator in self.operators:
-                s_attribute_string = s_attribute_string.replace("," + operator + ",", operator)
+                s_attribute_string = s_attribute_string.replace(separator + operator + separator, operator)
 
-            for s_attribute in s_attribute_string.split(","):
+            for s_attribute in s_attribute_string.split(separator):
                 for operator in self.operators:
                     if operator in s_attribute:
                         s_attribute = s_attribute.split(operator)[0].strip()
@@ -239,17 +270,26 @@ class QueryParser:
         with open("{}.yaml".format(save_file_path), "w") as file:
             yaml.safe_dump(solution_dict, file)
 
-    def run(self, file_path: str, save_file_path: str) -> Dict[int, Dict[str, List[str or Tuple[str, str]]]]:
+    def run(self, file_path: str, save_file_path: str, inner_separator: str = None, outer_separator: str = None) \
+            -> Dict[int, Dict[str, List[str or Tuple[str, str]]]]:
         """
-        Method for the whole crawling process.
+        Method for the whole parsing process.
 
-        :param file_path: The file in to read which the sql-statements are saved.
+        :param file_path: The file to read in which the sql-statements are saved.
         :param save_file_path: The path where to save the results.
+        :param inner_separator: The column separator used in the file. You can use '\t' for .tsv files. -> See
+            documentation for details.
+        :param outer_separator: The block separator used in the file. -> See documentation for details.
         :return:
         """
 
-        command_dict, file_type = self.read_file(file_path=file_path)
-        solution_dict = self.create_solution_dict(command_dict=command_dict, file_type=file_type)
+        command_dict, file_type, inner_separator, outer_separator = self.read_file(file_path=file_path,
+                                                                                   inner_separator=inner_separator,
+                                                                                   outer_separator=outer_separator)
+        solution_dict = self.create_solution_dict(command_dict=command_dict, file_type=file_type,
+                                                  inner_separator=inner_separator)
         self.save_solution_dict(solution_dict=solution_dict, save_file_path=save_file_path)
 
         return solution_dict
+
+# TODO: add return documentation

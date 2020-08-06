@@ -7,9 +7,10 @@ from meta_collector import MetaCollector
 from vectorizer import Vectorizer
 
 
-def parse_query_file(file_path: str, save_file_path: str):
+def parse_query_file(file_path: str, save_file_path: str, inner_separator: str = None, outer_separator: str = None):
     query_parser = QueryParser()
-    query_parser.run(file_path=file_path, save_file_path=save_file_path)
+    query_parser.run(file_path=file_path, save_file_path=save_file_path, inner_separator=inner_separator,
+                     outer_separator=outer_separator)
 
 
 def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
