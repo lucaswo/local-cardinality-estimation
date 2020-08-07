@@ -14,7 +14,7 @@ def crawl(file_path: str, save_file_path: str):
 
 
 def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
-    db_conn = DatabaseConnector(database=Database.MARIADB)
+    db_conn = DatabaseConnector(database=Database.POSTGRES)
     db_conn.connect(config_file_path=config_file_path)
     mc = MetaCollector(db_conn)
     mc.get_meta_from_file(file_path=file_path, save_file_path=save_file_path)
@@ -46,7 +46,7 @@ def estimate(data_file_path: str, config_file_path: str, save_model_file_path: s
 
 
 def communicate(input_file_path: str, query_number: int, nullqueries: bool, save_file_path: str, config_file_path: str):
-    db_conn = DatabaseConnector(database=Database.MARIADB)
+    db_conn = DatabaseConnector(database=Database.POSTGRES)
     db_conn.connect(config_file_path=config_file_path)
     communicator = QueryCommunicator(meta_file_path=input_file_path)
     communicator.produce_queries(query_number=query_number, nullqueries=nullqueries, save_file_path=save_file_path,
@@ -56,7 +56,7 @@ def communicate(input_file_path: str, query_number: int, nullqueries: bool, save
 
 if __name__ == "__main__":
     # crawl("assets/job-light.sql", "assets/solution_dict")
-    collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_mariadb.yaml",
+    collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_postgres.yaml",
                  save_file_path="assets/meta_information")
 
     communicate(input_file_path='assets/meta_information.yaml', query_number=20, nullqueries=False,
