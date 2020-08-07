@@ -2,6 +2,7 @@ from typing import Tuple
 import psycopg2 as postgres
 import yaml
 import csv
+from database_connector import DatabaseConnector
 
 
 class PostgresEvaluator:
@@ -10,18 +11,10 @@ class PostgresEvaluator:
     Evaluate true and estimated cardinalities from q given query list and save them.
     """
 
-    db_name: str = None
-    db_user: str = None
-    db_password: str = None
-    db_host: str = None
-    db_port: str = None
-
-    conn = None
-    cur = None
-
+    db_conn: DatabaseConnector = None
     debug: bool = None
 
-    def __init__(self, config_path: str = 'postgres_evaluator/config.yaml', debug: bool = True, input_file_name: str = 'queries.csv'):
+    def __init__(self, database_connector: DatabaseConnector, debug: bool = True, input_file_name: str = 'queries.csv'):
         """
         Initializer for the PostgresEvaluator
 
@@ -36,58 +29,12 @@ class PostgresEvaluator:
         :param input_file_name: name of the file used for the sql query import, have to be .csv or .sql and located in the asset folder
         """
 
-        config: dict = None
-        with open(config_path, 'r') as c:
-            config = yaml.safe_load(c)
-
-        if config["db_name"] is None or config["db_name"] == "":
-            raise ValueError("Value for db_name is needed! You can provide it with the config dict or in config.yaml!")
-        if config["user"] is None or config["user"] == "":
-            raise ValueError("Value for user is needed! You can provide it with the config dict or in config.yaml!")
-        if config["password"] is None or config["password"] == "":
-            raise ValueError("Value for password is needed! You can provide it with the config dict or in config.yaml!")
-
-        self.db_name = config["db_name"]
-        self.db_user = config["user"]
-        self.db_password = config["password"]
-        self.db_host = config["host"] if (config["host"] is not None and config["host"] != "") else None
-        self.db_port = config["port"] if (config["port"] is not None and config["port"] != "") else None
-
+        self.db_conn = database_connector
         self.debug = debug
 
         self.query_data = []
         path = "../assets/" + input_file_name
         self.import_sql_queries(path)
-
-    def open_database_connection(self):
-        """
-        connect to the postgres database with the information given in the initialization
-        :return: void
-        """
-
-        if self.debug:
-            print("Connecting to postgres with dbname = {}, user = {}, host = {}, port = {}".format(self.db_name,
-                                                                                                    self.db_user,
-                                                                                                    self.db_host,
-                                                                                                    self.db_port))
-        self.conn = postgres.connect(dbname=self.db_name, user=self.db_user, password=self.db_password,
-                                     host=self.db_host, port=self.db_port)
-        self.conn.set_session(autocommit=True)
-        self.cur = self.conn.cursor()
-
-    def close_database_connection(self):
-        """
-        close the connection to the database
-        :return: void
-        """
-
-        if not self.conn:
-            print("There is no database-connection to close. Make sure to establish a connection to the database before"
-                  " trying to close it.")
-        else:
-            if self.debug:
-                print("Closing connection to postgres")
-            self.conn.close()
 
     def import_sql_queries(self, path):
         """
@@ -131,10 +78,8 @@ class PostgresEvaluator:
         :return: void
         """
         for query_as_dict in self.query_data:
-            if self.debug:
-                 print("Executing: {}".format(query_as_dict['query']))
-            self.cur.execute(query_as_dict['query'])
-            output = self.cur.fetchone()
+            self.db_conn.execute(query_as_dict['query'])
+            output = self.db_conn.fetchone()
             true_cardi = output[0]
             if self.debug:
                 print("true cardinality ('count(*)'): {}".format(true_cardi))
@@ -147,11 +92,9 @@ class PostgresEvaluator:
         """
         self.generate_explain_queries()
         for query_as_dict in self.query_data:
-            if self.debug:
-                print("Executing: {}".format(query_as_dict['explain_query']))
-            self.cur.execute(query_as_dict['explain_query'])
+            self.db_conn.execute(query_as_dict['explain_query'])
 
-            output = self.cur.fetchone()
+            output = self.db_conn.fetchone()
             start_index = output[0].index("rows=")
             end_index = output[0].index("width=")
             esti_cardi = output[0][start_index + 5:end_index - 1]
@@ -210,11 +153,9 @@ class PostgresEvaluator:
         function that manage the whole process of cardinality estimation/calculation
         :return: void
         """
-        self.open_database_connection()
         self.get_estimated_cardinalities()
         self.get_true_cardinalities()
         self.save_cardinalities()
-        self.close_database_connection()
 
 if __name__ == "__main__":
     pc = PostgresEvaluator()

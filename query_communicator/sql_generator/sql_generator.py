@@ -21,6 +21,7 @@ class SQLGenerator:
         min and max values of the columns with the step size.
         If None: meta-information.yaml generated from MetaCollector is used
         """
+        self.debug = debug
 
         if config is None:
             with open('meta_information.yaml', 'r') as file:
@@ -94,7 +95,7 @@ class SQLGenerator:
             q_count *= max
 
         if q_count < desired_number:
-            print('There are less queries to generate than desired! Maximum Quantity %d will be generated!' % (q_count))
+            print('There are less queries to generate than desired! %d queries will be generated instead!' % (q_count))
         return q_count
 
         return desired_number
@@ -122,7 +123,9 @@ class SQLGenerator:
 
                 # calculate maximum number of possible queries
                 max = self.max_query_number(qnumber, value['columns'])
-                print('Maximum Number of Queries to generate for entry %d: %d' % (key, max))
+
+                if self.debug:
+                    print('Maximum Number of queries to generate for entry %d: %d' % (key, max))
 
                 # set number of queries down to max, if desired number is too high
                 if max < qnumber:
@@ -135,7 +138,7 @@ class SQLGenerator:
                     encodings.clear()
 
                 min_max = [m[3] for m in value['columns']]
-                max_card = value['max_card'][0]
+                max_card = value['max_card']
 
                 if value['join_attributes'] == None:
                     value['join_attributes'] == []
@@ -165,10 +168,14 @@ class SQLGenerator:
                         # append query with all additional information. needed for the csv file
                         queries.append((key, sql))
 
+                    if self.debug:
+                        print('The following query has been generated: %s'%(sql))
                 all_queries += queries
 
         # save as .sql in a readable format with choosen name
         self.write_sql(all_queries, save_readable)
         end = time.time()
-        print('Generating %d queries needed' % (qnumber), '{:5.3f}s'.format(end - start))
+        if self.debug:
+            print('Generating %d queries needed' % (qnumber), '{:5.3f}s'.format(end - start))
+
         return queries
