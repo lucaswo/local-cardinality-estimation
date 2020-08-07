@@ -4,7 +4,6 @@ import csv
 import numpy as np
 from typing import Tuple, Dict, List
 from database_connector import DatabaseConnector
-from database_connector import Database
 
 
 class QueryCommunicator():
