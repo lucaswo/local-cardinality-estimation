@@ -46,8 +46,8 @@ def estimate(data_file_path: str, config_file_path: str, save_model_file_path: s
 
 
 def communicate(input_file_path: str, query_number: int, nullqueries: bool, save_file_path: str, config_file_path: str):
-    db_conn = DatabaseConnector()
-    db_conn.connect(database=Database.MARIADB, config_file_path=config_file_path)
+    db_conn = DatabaseConnector(database=Database.MARIADB)
+    db_conn.connect(config_file_path=config_file_path)
     communicator = QueryCommunicator(meta_file_path=input_file_path)
     communicator.produce_queries(query_number=query_number, nullqueries=nullqueries, save_file_path=save_file_path,
                                  database_connector=db_conn)
