@@ -1,7 +1,6 @@
-from typing import Tuple
-import psycopg2 as postgres
-import yaml
 import csv
+from typing import Tuple
+
 from database_connector import DatabaseConnector
 
 
@@ -22,26 +21,27 @@ class PostgresEvaluator:
         It must contain at least the dbname, the username and the password.
         Additionally the host and the port can be given if there not default (host: localhost, port: 5432).
 
-        :param config: if given: it has to be a dictionary with at least db_name, user and password and optionally host
-            and port (default to host: localhost, port: 5432 if not given)
-            if not given: the config file 'config.yaml' is used for these settings
         :param debug: boolean whether to print additional information while processing
-        :param input_file_name: name of the file used for the sql query import, have to be .csv or .sql and located in the asset folder
+        :param input_file_name: name of the file used for the sql query import, have to be .csv or .sql and located in
+            the asset folder
+        :param database_connector: Handles the database connection to the desired database.
         """
 
         self.db_conn = database_connector
         self.debug = debug
 
         self.query_data = []
-        path = "../assets/" + input_file_name
+        path = "assets/" + input_file_name
         self.import_sql_queries(path)
 
     def import_sql_queries(self, path):
         """
         load the queries from sql or csv file, wich is provided by the sql_generator submodule
-        :param path: path to the file with the given queries (per default in asset folder), relative to the postgres_evaluator folder
+        :param path: path to the file with the given queries (per default in asset folder), relative to the
+            postgres_evaluator folder
         :return: void
         """
+
         if self.debug:
             print("try to load queries from ", path)
         if path.endswith(".sql"):
@@ -67,6 +67,7 @@ class PostgresEvaluator:
         generate EXPLAIN sql statements for cardinality estimation
         :return: void
         """
+
         for query_as_dict in self.query_data:
             tmp = query_as_dict['query'].split('COUNT(*)')
             explain_query = "EXPLAIN " + tmp[0] + "*" + tmp[1]
@@ -77,6 +78,7 @@ class PostgresEvaluator:
         execute the given queries against the database and calculate the true cardinality from each query
         :return: void
         """
+
         for query_as_dict in self.query_data:
             self.db_conn.execute(query_as_dict['query'])
             output = self.db_conn.fetchone()
@@ -90,10 +92,11 @@ class PostgresEvaluator:
         execute the adapted queries against the database and calculate the postgres cardinality estimation for each query
         :return: void
         """
+
         self.generate_explain_queries()
         for query_as_dict in self.query_data:
             self.db_conn.execute(query_as_dict['explain_query'])
-
+            #TODO: Variants for MARIADB an SQLITE missing, self.db_conn.database gives database Enum value
             output = self.db_conn.fetchone()
             start_index = output[0].index("rows=")
             end_index = output[0].index("width=")
@@ -103,30 +106,32 @@ class PostgresEvaluator:
                 print("estimated cardinality: {}".format(esti_cardi))
             query_as_dict['estimated_cardinality'] = esti_cardi
 
-    def save_cardinalities(self, save_readable: Tuple[bool, str] = [True, '../assets/queries_with_cardinalities.txt'],
+    def save_cardinalities(self, save_readable: Tuple[bool, str] = (True, 'assets/queries_with_cardinalities.txt'),
                            eliminate_null_queries: bool = True):
         """
-        execute the adapted queries against the database and calculate the postgres cardinality estimation for each query
-
+        execute the adapted queries against the database and calculate the postgres cardinality estimation for each
+            query
         :param eliminate_null_queries: if True only queries with true cardinality > 0 will be saved
-        :param save_readable: if True: save queries and corresponing cardinalities human readable in an separate text file, per default as assets/queries_with_cardinalities.txt
-
+        :param save_readable: if True: save queries and corresponing cardinalities human readable in an separate text
+            file, per default as assets/queries_with_cardinalities.txt
         :return: void
         """
+
         if save_readable[0]:
             with open(save_readable[1], 'w') as f:
                 if self.debug:
-                    print(
-                        "Save human readable queries and corresponing cardinalities (firstly estimated, secondly true) on ",
+                    print("Save human readable queries and corresponing cardinalities(firstly estimated, secondly "
+                          "true) on ",
                         save_readable[1])
                 for query_as_dict in self.query_data:
-                    entry = f"{query_as_dict['query']} {query_as_dict['estimated_cardinality']} {query_as_dict['true_cardinality']}\n";
+                    entry = f"{query_as_dict['query']} {query_as_dict['estimated_cardinality']} " \
+                            f"{query_as_dict['true_cardinality']}\n";
 
                     f.write(entry)
 
         header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step', 'estimated_cardinality',
                   'true_cardinality']
-        with open('../assets/queries_with_cardinalities.csv', 'w', newline='') as csvfile:
+        with open('assets/queries_with_cardinalities.csv', 'w', newline='') as csvfile:
             querywriter = csv.DictWriter(csvfile, delimiter=';', fieldnames=header)
             querywriter.writeheader()
             querycounter = 0
@@ -139,7 +144,7 @@ class PostgresEvaluator:
                                 'estimated_cardinality': query_as_dict.get('estimated_cardinality'),
                                 'true_cardinality': query_as_dict.get('true_cardinality')}
                 if eliminate_null_queries:
-                    if ordered_copy['true_cardinality'] != None and ordered_copy['true_cardinality'] > 0:
+                    if ordered_copy['true_cardinality'] is not None and ordered_copy['true_cardinality'] > 0:
                         querywriter.writerow(ordered_copy)
                         querycounter += 1
                 else:
@@ -153,10 +158,8 @@ class PostgresEvaluator:
         function that manage the whole process of cardinality estimation/calculation
         :return: void
         """
+
         self.get_estimated_cardinalities()
         self.get_true_cardinalities()
         self.save_cardinalities()
 
-if __name__ == "__main__":
-    pc = PostgresEvaluator()
-    pc.get_cardinalities()
