@@ -57,7 +57,7 @@ def communicate(input_file_path: str, query_number: int, nullqueries: bool, save
 
 
 if __name__ == "__main__":
-    # crawl("assets/job-light.sql", "assets/solution_dict")
+    parse_query_file(file_path="assets/job-light.sql", save_file_path="assets/solution_dict")
     collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_mariadb.yaml",
                  save_file_path="assets/meta_information")
 
@@ -66,5 +66,5 @@ if __name__ == "__main__":
     vectorize("assets/fin_queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
     estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
 
-    # vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
-    # estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
+    vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
+    estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
