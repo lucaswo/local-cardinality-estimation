@@ -4,9 +4,9 @@ from typing import Tuple
 from database_connector import DatabaseConnector
 
 
-class PostgresEvaluator:
+class DatabaseEvaluator:
     """
-    Class for PostgresEvaluator. Using psycopg2 to establish a connection to the postgres database.
+    Class for DatabaseEvaluator. Using psycopg2 to establish a connection to the postgres database.
     Evaluate true and estimated cardinalities from q given query list and save them.
     """
 
@@ -15,7 +15,7 @@ class PostgresEvaluator:
 
     def __init__(self, database_connector: DatabaseConnector, debug: bool = True, input_file_name: str = 'queries.csv'):
         """
-        Initializer for the PostgresEvaluator
+        Initializer for the DatabaseEvaluator
 
         Configuration options for the database are optionally passed via a config dict.
         It must contain at least the dbname, the username and the password.
@@ -38,7 +38,7 @@ class PostgresEvaluator:
         """
         load the queries from sql or csv file, wich is provided by the sql_generator submodule
         :param path: path to the file with the given queries (per default in asset folder), relative to the
-            postgres_evaluator folder
+            database_evaluator folder
         :return: void
         """
 

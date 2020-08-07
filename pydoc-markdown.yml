@@ -35,9 +35,9 @@ renderer:
       children:
         - title: Postgres-Evaluator Class
           contents:
-            - postgres_evaluator.postgres_evaluator.*
+            - database_evaluator.database_evaluator.*
         - title: Postgres-Evaluator Readme
-          source: postgres_evaluator/README.md
+          source: database_evaluator/README.md
     - title: Vectorizer
       children:
         - title: Vectorizer Class

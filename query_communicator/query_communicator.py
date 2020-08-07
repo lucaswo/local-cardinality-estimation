@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 
 from database_connector import DatabaseConnector
-from .postgres_evaluator import PostgresEvaluator
+from .database_evaluator import DatabaseEvaluator
 from .sql_generator import SQLGenerator
 
 
@@ -34,7 +34,7 @@ class QueryCommunicator:
         generator.generate_queries(qnumber=query_number, save_readable='../assets/null_including_queries')
 
         # TODO: save file path as parameter in evaluator, so save file path can be passed trough
-        evaluator = PostgresEvaluator(input_file_name='null_including_queries.csv',
+        evaluator = DatabaseEvaluator(input_file_name='null_including_queries.csv',
                                       database_connector=database_connector)
         evaluator.get_cardinalities()
 
@@ -55,7 +55,7 @@ class QueryCommunicator:
         generator = SQLGenerator(config=self.meta)
         generator.generate_queries(qnumber=query_number_with_buffer, save_readable='assets/nullfree_queries')
 
-        evaluator = PostgresEvaluator(input_file_name='nullfree_queries.csv', database_connector=database_connector)
+        evaluator = DatabaseEvaluator(input_file_name='nullfree_queries.csv', database_connector=database_connector)
         evaluator.get_cardinalities()
         reduced_queries = self.reduce_queries(query_number=query_number)
 
