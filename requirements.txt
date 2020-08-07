@@ -1,7 +1,8 @@
-PyYAML==5.3.1               # QueryParser + DatabaseConnector + MetaCollector + Estimator
-typing==3.7.4.1             # QueryParser + DatabaseConnector + MetaCollector + Estimator
+typing==3.7.4.1             # all
 
-numpy==1.18.3               # MetaCollector + Estimator
+PyYAML==5.3.1               # QueryParser + DatabaseConnector + MetaCollector + SQLGenerator + Estimator
+
+numpy==1.18.3               # MetaCollector + QueryCommunicator + Vectorizer + Estimator
 
 psycopg2==2.8.5             # DatabaseConnector
 mariadb==1.0.0              # DatabaseConnector

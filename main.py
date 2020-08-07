@@ -16,7 +16,7 @@ def parse_query_file(file_path: str, save_file_path: str, inner_separator: str =
 
 
 def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
-    db_conn = DatabaseConnector(database=Database.MARIADB)
+    db_conn = DatabaseConnector(database=Database.POSTGRES)
     db_conn.connect(config_file_path=config_file_path)
     mc = MetaCollector(db_conn)
     mc.get_meta_from_file(file_path=file_path, save_file_path=save_file_path)
@@ -48,7 +48,7 @@ def estimate(data_file_path: str, config_file_path: str, save_model_file_path: s
 
 
 def communicate(input_file_path: str, query_number: int, nullqueries: bool, save_file_path: str, config_file_path: str):
-    db_conn = DatabaseConnector(database=Database.MARIADB)
+    db_conn = DatabaseConnector(database=Database.POSTGRES)
     db_conn.connect(config_file_path=config_file_path)
     communicator = QueryCommunicator(meta_file_path=input_file_path)
     communicator.produce_queries(query_number=query_number, nullqueries=nullqueries, save_file_path=save_file_path,
@@ -58,13 +58,10 @@ def communicate(input_file_path: str, query_number: int, nullqueries: bool, save
 
 if __name__ == "__main__":
     parse_query_file(file_path="assets/job-light.sql", save_file_path="assets/solution_dict")
-    collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_mariadb.yaml",
+    collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_postgres.yaml",
                  save_file_path="assets/meta_information")
-
-    communicate(input_file_path='assets/meta_information.yaml', query_number=20, nullqueries=False,
-                save_file_path='assets/fin_queries_with_cardinalities.csv', config_file_path="meta_collector/config_postgres.yaml")
+    communicate(input_file_path='assets/meta_information.yaml', query_number=10, nullqueries=False,
+                save_file_path='assets/fin_queries_with_cardinalities.csv',
+                config_file_path="meta_collector/config_postgres.yaml")
     vectorize("assets/fin_queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
-    estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
-
-    vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
-    estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
+    estimate("assets/main_py_test_vectorizer.csv", "estimator/config.yaml", "assets/model")

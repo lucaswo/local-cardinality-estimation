@@ -42,6 +42,8 @@ class Vectorizer:
         with open(queries_with_cardinalities_path) as f:
             next(f) # skip header
             reader = csv.reader(f, delimiter=';')
+            # TODO: it is assumed, that the difference between lineendings in windows and linux are different. This causes empty arrays. Maybe use numpy instead of csv
+            reader = list(filter(lambda p: p, reader))
             for querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality in reader:
                 
                 querySetID = int(querySetID)
