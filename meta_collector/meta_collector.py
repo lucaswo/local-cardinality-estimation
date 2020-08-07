@@ -1,4 +1,3 @@
-import argparse
 import os.path
 from enum import Enum
 from typing import List, Tuple, Dict
@@ -42,15 +41,17 @@ class MetaCollector:
 
         self.debug = debug
 
-    def get_columns_data(self, table_names: List[str or Tuple[str, str]], columns: List[str]) -> \
+    def get_columns_data_postgres(self, table_names: List[str or Tuple[str, str]], columns: List[str]) -> \
             List[Tuple[str, str, str, Tuple[int, int, int], Dict[str, LabelEncoder], str]]:
         """
-        Get column-name and datatype for the requested columns of the corresponding tables.
+        Get column-name and datatype for the requested columns of the corresponding tables for PostgreSQL and MariaDB.
 
         :param table_names: List of names of tables, as strings or tuples containing table-name in first and alias in
             second place, to join.
         :param columns: Columns to project on.
-        :return:
+        :return: A list containing the name of the column, the table alias (if existent, else the table-name), the
+            data-type of the column, the tuple containing min value, max value and step size, the encodings if datatype
+            is not int and the alternative column-name if the original one occurs more than once.
         """
 
         if isinstance(table_names[0], list) or isinstance(table_names[0], tuple):
@@ -95,6 +96,16 @@ class MetaCollector:
 
     def get_columns_data_sqlite(self, table_names: List[str or Tuple[str, str]], columns: List[str]) -> \
             List[Tuple[str, str, str, Tuple[int, int, int], Dict[str, LabelEncoder], str]]:
+        """
+        Get column-name and datatype for the requested columns of the corresponding tables for SQLite.
+
+        :param table_names: List of names of tables, as strings or tuples containing table-name in first and alias in
+            second place, to join.
+        :param columns: Columns to project on.
+        :return: A list containing the name of the column, the table alias (if existent, else the table-name), the
+            data-type of the column, the tuple containing min value, max value and step size, the encodings if datatype
+            is not int and the alternative column-name if the original one occurs more than once.
+        """
 
         columns_types = []
         already_seen = []
@@ -164,7 +175,18 @@ class MetaCollector:
 
             return (min(cats).item(), max(cats).item(), 1), encoders
 
-    def get_max_card(self, table_names: List[str or Tuple[str, str]], join_atts: List[str or Tuple[str, str]]) -> int:
+    def get_max_card(self, table_names: List[str or Tuple[str, str]],
+                     join_atts: List[str or Tuple[str, str]] = None) -> int:
+        """
+        Get the size of the join-table without any selections, the so called max-card.
+
+        :param table_names: List of names of tables, as strings or tuples containing table-name in first and alias in
+            second place, to join.
+        :param join_atts: List of attributes, as strings or tuples containing the two attributes to join with '=', to
+            join the tables on. -> is optional, because there is no join if there is only one table and so there would
+            be no join-attribute needed in that case
+        :return:
+        """
 
         if len(table_names) > 1:
             if isinstance(table_names[0], list) or isinstance(table_names[0], tuple):
@@ -249,32 +271,20 @@ class MetaCollector:
         return max_card
 
     def setup_cube_view(self, new_table_name: str, columns):
+        """
+        Create the table tmpview_cube if cube==True containing the metadata for the given tables joined on the
+        attributes and projected on the columns.
+
+        :param new_table_name: The name of the before created table.
+        :param columns: Columns to project on.
+        """
+
         sql = """CREATE TABLE {tab}_cube AS (SELECT {col}, count(*)::integer, 0.0 as perc FROM {tab}
                         GROUP BY GROUPING SETS(({col})));
-                        UPDATE tmpview_cube SET perc = count/(SELECT SUM(count) FROM tmpview_cube);""".format(
+                        UPDATE {tab}_cube SET perc = count/(SELECT SUM(count) FROM {tab});""".format(
             tab=new_table_name, col=",".join(column[0].split(".")[-1] for column in columns))
 
         self.db_conn.execute(sql)
-
-    @staticmethod
-    def eliminate_duplicates(columns: List[str]) -> List[str]:
-        """
-        This method is responsible for solving the problem of column-names existing at least double. Therefore it adds
-        an alias which is build from the table-alias _ column-name.
-
-        :param columns: List of strings of the column-names
-        :return: List of strings of the column-names, without duplicates.
-        """
-
-        already_seen = []
-        for index, column in enumerate(columns):
-            column_split = column.split(".")
-            if column_split[-1] not in already_seen:
-                already_seen.append(column_split[-1])
-            else:
-                columns[index] = "{} {}".format(column, "_".join(column_split))
-
-        return columns
 
     def get_meta(self, table_names: List[str or Tuple[str, str]], columns: List[str],
                  join_atts: List[str or Tuple[str, str]] = None, mode: CreationMode = CreationMode.NONE,
@@ -294,11 +304,12 @@ class MetaCollector:
         :param batchmode: whether the meta data is collected in batches or not -> connection to db held open if batch
             mode
         :param mode: see CreationMode-Enum
+        :param cube: Whether to create the _cube table additionally (only for CreationMode Temporary or Permanent).
         :return: dictionary containing the meta-information
         """
 
         if self.db_conn.database == Database.POSTGRES or self.db_conn.database == Database.MARIADB:
-            columns_data = self.get_columns_data(table_names=table_names, columns=columns)
+            columns_data = self.get_columns_data_postgres(table_names=table_names, columns=columns)
         elif self.db_conn.database == Database.SQLITE:
             columns_data = self.get_columns_data_sqlite(table_names=table_names, columns=columns)
         else:
@@ -357,7 +368,6 @@ class MetaCollector:
             batch = yaml.safe_load(file)
 
         for index in batch:
-            if index != 14: continue
             solution_dict = {index: self.get_meta(table_names=batch[index]["table_names"],
                                                   columns=batch[index]["selection_attributes"],
                                                   join_atts=batch[index]["join_attributes"],
@@ -386,37 +396,3 @@ class MetaCollector:
         with open(file_name + ".yaml", mode) as file:
             yaml.safe_dump(meta_dict, file)
 
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("-s", "--save", action="store_true", help="Whether to save the results.", default=True)
-#     parser.add_argument("-o", "--override", action="store_true", help="Whether to override already existing results.",
-#                         default=True)
-#     parser.add_argument("-m", "--mode", type=int, help="The creation mode. 0-> None; 1-> Temporary; 2-> Permanent",
-#                         default=0)
-#     parser.add_argument("--file_path", type=str, help="The path for the file containing the join information.")
-#     parser.add_argument("--save_file_path", type=str, help="The path for the file where the results should be saved.")
-#
-#     args = parser.parse_args()
-#
-#     db_conn = DatabaseConnector()
-#     db_conn.connect(database=Database.MARIADB, config_file_path="config_mariadb.yaml")
-#     mc = MetaCollector(db_conn)
-#     mc.get_meta_from_file(file_path=args.file_path, save=args.save, save_file_path=args.save_file_path, mode=args.mode,
-#                           override=args.override)
-#     db_conn.close_database_connection()
-
-# TODO: correct docu, optional: find a way to make the commandline version work
-
-# db_conn = DatabaseConnector(database=Database.SQLITE)
-# db_conn.connect(sqlite_file_path="E:/imdb.db")
-db_conn = DatabaseConnector(database=Database.MARIADB)
-db_conn.connect(config_file_path="config_mariadb.yaml")
-# db_conn = DatabaseConnector(database=Database.POSTGRES)
-# db_conn.connect(config_file_path="config_postgres.yaml")
-mc = MetaCollector(db_conn)
-# mc.get_meta(["movie_companies", "movie_info_idx", "title"], ["production_year", "info_type_id", "company_type_id"],
-#             ["title.id=movie_companies.movie_id", "title.id=movie_info_idx.movie_id"], mode=CreationMode.TEMPORARY)
-mc.get_meta_from_file(file_path="../assets/solution_dict.yaml")
-# mc.get_meta(["title"], ["imdb_index"])
-db_conn.close_database_connection()
