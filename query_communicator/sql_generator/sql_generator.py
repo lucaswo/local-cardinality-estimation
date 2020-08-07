@@ -17,21 +17,23 @@ class SQLGenerator:
 
         It's also possible to pass an own meta.yaml file to skip the metaCollector Step.
 
-        :param config: Config file which contains columns with their datatypes, tables, join_attributes, encodings,maximum cardinality
+        :param config: Config file which contains columns with their datatypes, tables, join_attributes, encodings,
+            maximum cardinality
         min and max values of the columns with the step size.
         If None: meta-information.yaml generated from MetaCollector is used
         """
+
         self.debug = debug
 
         if config is None:
             with open('meta_information.yaml', 'r') as file:
                 self.q_set = yaml.safe_load(file)
-                if debug == True:
+                if debug:
                     print(self.q_set, '\n', type(self.q_set))
         else:
             with open(config, 'r') as file:
                 self.q_set = yaml.safe_load(file)
-                if debug == True:
+                if debug:
                     print(self.q_set, '\n', type(self.q_set))
 
         for key, gen_params in self.q_set.items():
@@ -47,24 +49,27 @@ class SQLGenerator:
             if gen_params['join_attributes'] is None and len(gen_params['table_names']) > 1:
                 raise ValueError('There are tables to join but no join attributes are given!')
 
-    def write_sql(self, queries: List[Tuple[int, str]], file: str):
+    @staticmethod
+    def write_sql(queries: List[Tuple[int, str]], file: str):
         '''
         Function for writing a human readable sql file with the generated queries
         :param queries: list of queries, containing querySetID and query as tuple
         :param file: file name for sql file
         :return:
         '''
-        with open('%s.sql' % (file), 'w+') as file:
+
+        with open('%s.sql' % file, 'w+') as file:
             for q in queries:
                 file.write(q[1] + '\n')
 
-    def random_operator_value(self, range: List[int], val_type: str, encoding: dict = None) -> Tuple[str, str or int]:
+    @staticmethod
+    def random_operator_value(range: List[int], val_type: str, encoding: dict = None) -> Tuple[str, str or int]:
         '''
         Function for random operator and value creation from a list of allowed operators and a range of values
 
-
         :param range: Min_max Value range and stepsize of a given column from meta_information
-        :param type: Type of column, can be either integer or enumeration. when enumeration, then an encoding dict has to be given
+        :param val_type: Type of column, can be either integer or enumeration. when enumeration, then an encoding dict has to be given
+        :param encoding: Encoding of the possible values for the column
         :return: Tuple consisting of operator and value as string or int
         '''
 
@@ -81,9 +86,10 @@ class SQLGenerator:
             elif val_type == 'varchar':
                 val = random.choice(list(encoding.keys()))
 
-        return (op, val)
+        return op, val
 
-    def max_query_number(self, desired_number, entry):
+    @staticmethod
+    def max_query_number(desired_number, entry):
         q_count = 1
         for min_max in entry:
             col = min_max[3]
@@ -95,10 +101,10 @@ class SQLGenerator:
             q_count *= max
 
         if q_count < desired_number:
-            print('There are less queries to generate than desired! %d queries will be generated instead!' % (q_count))
+            print('There are less queries to generate than desired! %d queries will be generated instead!' % q_count)
         return q_count
 
-        return desired_number
+
 
     def generate_queries(self, qnumber: int = 10, save_readable: str = 'queries'):
         '''
@@ -115,7 +121,7 @@ class SQLGenerator:
         all_queries = []
         header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step']
 
-        with open('%s.csv' % (save_readable), 'w') as file:
+        with open('%s.csv' % save_readable, 'w') as file:
             writer = csv.DictWriter(file, delimiter=';', fieldnames=header)
             writer.writeheader()
 
@@ -131,7 +137,7 @@ class SQLGenerator:
                 if max < qnumber:
                     qnumber = max
 
-                # looking for values needed in csv. for every query in a set the same values. Look up here for performance
+                # looking for values needed in csv. for every query in a set the same values.
                 encodings = [enc[4] for enc in value['columns']]
 
                 if encodings == [{}] * len(value['columns']):
@@ -140,8 +146,8 @@ class SQLGenerator:
                 min_max = [m[3] for m in value['columns']]
                 max_card = value['max_card']
 
-                if value['join_attributes'] == None:
-                    value['join_attributes'] == []
+                if value['join_attributes'] is None:
+                    value['join_attributes'] = []
 
                 # generate queries until there are 'number' of unique queries
                 queries = []
@@ -169,13 +175,13 @@ class SQLGenerator:
                         queries.append((key, sql))
 
                     if self.debug:
-                        print('The following query has been generated: %s'%(sql))
+                        print('The following query has been generated: %s' % sql)
                 all_queries += queries
 
         # save as .sql in a readable format with choosen name
         self.write_sql(all_queries, save_readable)
         end = time.time()
         if self.debug:
-            print('Generating %d queries needed' % (qnumber), '{:5.3f}s'.format(end - start))
+            print('Generating %d queries needed' % qnumber, '{:5.3f}s'.format(end - start))
 
         return queries
