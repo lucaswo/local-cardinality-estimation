@@ -107,13 +107,14 @@ class DatabaseEvaluator:
             query_as_dict['estimated_cardinality'] = esti_cardi
 
     def save_cardinalities(self, save_readable: Tuple[bool, str] = (True, 'assets/queries_with_cardinalities.txt'),
-                           eliminate_null_queries: bool = True):
+                           save_file_path: str = 'assets/queries_with_cardinalities.csv' , eliminate_null_queries: bool = True):
         """
         execute the adapted queries against the database and calculate the postgres cardinality estimation for each
             query
         :param eliminate_null_queries: if True only queries with true cardinality > 0 will be saved
         :param save_readable: if True: save queries and corresponing cardinalities human readable in an separate text
             file, per default as assets/queries_with_cardinalities.txt
+        :param save_file_path: path to save the finished queries with their cardinalities
         :return: void
         """
 
@@ -131,7 +132,7 @@ class DatabaseEvaluator:
 
         header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step', 'estimated_cardinality',
                   'true_cardinality']
-        with open('assets/queries_with_cardinalities.csv', 'w', newline='') as csvfile:
+        with open(save_file_path, 'w', newline='') as csvfile:
             querywriter = csv.DictWriter(csvfile, delimiter=';', fieldnames=header)
             querywriter.writeheader()
             querycounter = 0
