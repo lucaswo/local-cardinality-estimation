@@ -1,1 +1,0 @@
-![QueryParser class-diagram](../diagrams/crawler_uml.jpg)

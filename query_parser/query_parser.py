@@ -6,23 +6,39 @@ import yaml
 
 
 class QueryFormat(Enum):
-    CROSS_PRODUCT = "cp"
-    JOIN_ON = "jo"
+    """
+    Enum for the different supported query-formats.
+
+    CROSS_PRODUCT: SELECT COUNT(*) FROM movie_companies mc,title t,movie_info_idx mi_idx WHERE t.id=mc.movie_id AND
+        t.id=mi_idx.movie_id AND mi_idx.info_type_id=112 AND mc.company_type_id=2;
+
+    JOIN_ON: SELECT COUNT(*) FROM movie_companies mc INNER JOIN title t ON (t.id=mc.movie_id) INNER JOIN movie_info_idx
+        mi_idx ON (t.id=mi_idx.movie_id) WHERE mi_idx.info_type_id=112 AND mc.company_type_id=2;
+    """
+
+    CROSS_PRODUCT = "cross_product"
+    JOIN_ON = "join_on"
 
 
 class QueryParser:
     """
-    Class for the query_parser. This is responsible of reading a given file and return a file containing the aggregated
-    information of this file.
+    Class for the query_parser. This is responsible of reading a given file (.csv/.tsv or .sql) which contains sql
+    queries (for more details see Readme) parse them and return a file (.yaml) containing the aggregated information of
+    the input file. This aggregated .yaml file is the requirement for the MetaCollector.
     """
 
     operators = ["<=", "!=", ">=", "=", "<", ">", "IS"]
+    """
+    The possible operators which can occur in the queries. ["<=", "!=", ">=", "=", "<", ">", "IS"]
+    """
 
     def read_file(self, file_path: str, inner_separator: str = None, outer_separator: str = None,
-                  query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) \
-            -> Tuple[Dict, str, str, str]:
+                  query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) -> Tuple[Dict, str, str, str]:
         """
-        Generic Method for reading the sql statements from a given .sql or a .csv file.
+        Generic method for rooting the processing of the input file which contains the queries according to the given
+        file type. Because .sql/.tsv files need to be processed another way than .sql files. The parameters
+        inner_separator and outer_separator allow the user to use customized .csv/.tsv files. The parameter
+        query_format allows the user to choose between the two most common join formats.
 
         :param file_path: Path to the file containing the sql statements. This path has to end with .csv or .sql. No
             other file types are supported at the moment.

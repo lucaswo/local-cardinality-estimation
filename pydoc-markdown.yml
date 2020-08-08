@@ -24,20 +24,27 @@ renderer:
             - meta_collector.meta_collector.*
         - title: Meta-Collector Readme
           source: meta_collector/README.md
+    - title: Query-Communicator
+      children:
+        - title: Query-Communicator Class
+          contents:
+              - query_communicator.query_communicator.*
+        - title: Query-Communicator Readme
+          source: query_communicator/README.md
     - title: SQL-Generator
       children:
         - title: SQL-Generator Class
           contents:
-              - sql_generator.sql_generator.*
+              - query_communicator.sql_generator.sql_generator.*
         - title: SQL-Generator Readme
-          source: sql_generator/README.md
+          source: query_communicator/sql_generator/README.md
     - title: Postgres-Evaluator
       children:
         - title: Postgres-Evaluator Class
           contents:
-            - postgres_evaluator.postgres_evaluator.*
+            - query_communicator.postgres_evaluator.postgres_evaluator.*
         - title: Postgres-Evaluator Readme
-          source: postgres_evaluator/README.md
+          source: query_communicator/postgres_evaluator/README.md
     - title: Vectorizer
       children:
         - title: Vectorizer Class
