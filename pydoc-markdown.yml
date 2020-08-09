@@ -10,13 +10,13 @@ renderer:
     - title: Home
       name: index
       source: README.md
-    - title: Crawler
+    - title: QueryParser
       children:
-        - title: Crawler Class
+        - title: QueryParser Class
           contents:
-            - crawler.crawler.*
-        - title: Crawler Readme
-          source: crawler/README.md
+            - query_parser.query_parser.*
+        - title: QueryParser Readme
+          source: query_parser/README.md
     - title: Meta-Collector
       children:
         - title: Meta-Collector Class

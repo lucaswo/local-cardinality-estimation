@@ -1,6 +1,6 @@
 import numpy as np
 
-from crawler import Crawler
+from query_parser import QueryParser, QueryFormat
 from database_connector import DatabaseConnector, Database
 from estimator import Estimator
 from meta_collector import MetaCollector
@@ -8,9 +8,11 @@ from vectorizer import Vectorizer
 from query_communicator import QueryCommunicator
 
 
-def crawl(file_path: str, save_file_path: str):
-    crawler = Crawler()
-    crawler.run(file_path=file_path, save_file_path=save_file_path)
+def parse_query_file(file_path: str, save_file_path: str, inner_separator: str = None, outer_separator: str = None,
+                     query_format: QueryFormat = None):
+    query_parser = QueryParser()
+    query_parser.run(file_path=file_path, save_file_path=save_file_path, inner_separator=inner_separator,
+                     outer_separator=outer_separator, query_format=query_format)
 
 
 def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
@@ -55,14 +57,11 @@ def communicate(input_file_path: str, query_number: int, nullqueries: bool, save
 
 
 if __name__ == "__main__":
-    # crawl("assets/job-light.sql", "assets/solution_dict")
+    parse_query_file(file_path="assets/job-light.sql", save_file_path="assets/solution_dict")
     collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_postgres.yaml",
                  save_file_path="assets/meta_information")
-
     communicate(input_file_path='assets/meta_information.yaml', query_number=10, nullqueries=False,
-                save_file_path='assets/fin_queries_with_cardinalities.csv', config_file_path="meta_collector/config_postgres.yaml")
+                save_file_path='assets/fin_queries_with_cardinalities.csv',
+                config_file_path="meta_collector/config_postgres.yaml")
     vectorize("assets/fin_queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
-    estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
-
-    # vectorize("assets/queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
-    # estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
+    estimate("assets/main_py_test_vectorizer.csv", "estimator/config.yaml", "assets/model")
