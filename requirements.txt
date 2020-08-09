@@ -1,6 +1,12 @@
-PyYAML==5.3.1               # Crawler + DatabaseConnector + MetaCollector + Estimator
+typing==3.7.4.1             # all
+
+PyYAML==5.3.1               # QueryParser + DatabaseConnector + MetaCollector + SQLGenerator + Estimator
+
+numpy==1.18.3               # MetaCollector + QueryCommunicator + Vectorizer + Estimator
+
 psycopg2==2.8.5             # DatabaseConnector
 mariadb==1.0.0              # DatabaseConnector
 scikit-learn==0.22.2.post1  # MetaCollector
 tensorflow==2.2.0           # Estimator
 keras==2.4.2                # Estimator
+

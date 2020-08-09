@@ -343,10 +343,10 @@ class MetaCollector:
     def get_meta_from_file(self, file_path: str, save: bool = True, save_file_path: str = None,
                            mode: CreationMode = CreationMode.NONE, override: bool = True) -> Dict[int, any]:
         """
-        Method for collecting meta data for the information given in a file from Crawler or at least a file formatted
+        Method for collecting meta data for the information given in a file from QueryParser or at least a file formatted
         like this.
 
-        :param file_path: Path to the file. Format has to be the same like the output of Crawler
+        :param file_path: Path to the file. Format has to be the same like the output of QueryParser
         :param save: Whether to save the information to file or not. -> It is recommended to do so.
         :param save_file_path: Optional path for the save-file.
         :param mode: see CreationMode-Enum
