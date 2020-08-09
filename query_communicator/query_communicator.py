@@ -22,10 +22,13 @@ class QueryCommunicator:
     def __init__(self, meta_file_path: str = '../assets/meta_information.yaml'):
         self.meta = meta_file_path
 
-    def get_queries(self, database_connector: DatabaseConnector, query_number: int = 10):
+    def get_queries(self, database_connector: DatabaseConnector, save_file_path: str, query_number: int):
         '''
         Function for generating queries and their cardinalities if nullqueries are allowed.
         Saves generated queries in ../assets/queries_with_cardinalities.csv
+        :param query_number: number of queries to generate
+        :param save_file_path: path to save the finished queries with their cardinalities
+        :param database_connector: Handles the database connection to the desired database.
         :return:
         '''
 
@@ -33,10 +36,9 @@ class QueryCommunicator:
         print("generate ", query_number, " queries")
         generator.generate_queries(qnumber=query_number, save_readable='../assets/null_including_queries')
 
-        # TODO: save file path as parameter in evaluator, so save file path can be passed trough
         evaluator = DatabaseEvaluator(input_file_name='null_including_queries.csv',
                                       database_connector=database_connector)
-        evaluator.get_cardinalities()
+        evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path = save_file_path)
 
     def get_nullfree_queries(self, query_number: int, save_file_path: str, database_connector: DatabaseConnector):
         '''
@@ -56,21 +58,23 @@ class QueryCommunicator:
         generator.generate_queries(qnumber=query_number_with_buffer, save_readable='assets/nullfree_queries')
 
         evaluator = DatabaseEvaluator(input_file_name='nullfree_queries.csv', database_connector=database_connector)
-        evaluator.get_cardinalities()
-        reduced_queries = self.reduce_queries(query_number=query_number)
+        evaluator.get_cardinalities(eliminate_null_queries=True, save_file_path=save_file_path)
+        reduced_queries = self.reduce_queries(query_number=query_number, save_file_path=save_file_path)
 
         self.write_queries(queries=reduced_queries, save_file_path=save_file_path)
 
         return reduced_queries
 
     @staticmethod
-    def reduce_queries(query_number:int) -> List:
+    def reduce_queries(query_number: int, save_file_path: str) -> List:
         '''
         Reduces genrated queries to the requested number of queries
-        :return:DataFrame with reduced query sets
+        :param query_number: number of queries to generate
+        :param save_file_path: path to save the finished queries with their cardinalities
+        :return: DataFrame with reduced query sets
         '''
 
-        with open('assets/queries_with_cardinalities.csv', 'r') as file:
+        with open(save_file_path, 'r') as file:
             csv_reader = csv.reader(file, delimiter=';')
             queries = np.array([r for r in csv_reader])
             set_ids = set(queries[1:, 0])
@@ -118,7 +122,8 @@ class QueryCommunicator:
         '''
 
         if nullqueries:
-            self.get_queries(query_number=query_number, database_connector=database_connector)
+            self.get_queries(save_file_path=save_file_path, query_number=query_number,
+                             database_connector=database_connector)
         else:
             self.get_nullfree_queries(save_file_path=save_file_path, query_number=query_number,
                                       database_connector=database_connector)

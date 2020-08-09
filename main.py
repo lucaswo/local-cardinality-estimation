@@ -59,7 +59,7 @@ if __name__ == "__main__":
     collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_postgres.yaml",
                  save_file_path="assets/meta_information")
 
-    communicate(input_file_path='assets/meta_information.yaml', query_number=20, nullqueries=False,
+    communicate(input_file_path='assets/meta_information.yaml', query_number=10, nullqueries=False,
                 save_file_path='assets/fin_queries_with_cardinalities.csv', config_file_path="meta_collector/config_postgres.yaml")
     vectorize("assets/fin_queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
     estimate("assets/queries_with_cardinalites_vectors.npy", "estimator/config.yaml", "assets/model")
