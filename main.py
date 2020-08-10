@@ -1,3 +1,6 @@
+import argparse
+import os
+
 import numpy as np
 
 from query_parser import QueryParser, QueryFormat
@@ -57,11 +60,36 @@ def communicate(input_file_path: str, query_number: int, nullqueries: bool, save
 
 
 if __name__ == "__main__":
-    parse_query_file(file_path="assets/job-light.sql", save_file_path="assets/solution_dict")
-    collect_meta(file_path="assets/solution_dict.yaml", config_file_path="meta_collector/config_postgres.yaml",
-                 save_file_path="assets/meta_information")
-    communicate(input_file_path='assets/meta_information.yaml', query_number=10, nullqueries=False,
-                save_file_path='assets/fin_queries_with_cardinalities.csv',
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--input_file", type=str, default="assets/job-light.sql",
+                        help="The input file which contains the sql queries for the QueryParser.")
+    parser.add_argument("-q", "--query_number", type=int, help="The number of queries you want for the result.",
+                        default=10000)
+    parser.add_argument("-n", "--nullqueries", type=bool, default=False,
+                        help="Whether to produce queries with the true cardinality 0. When disabling this option the "
+                             "creation process takes a longer time.")
+    parser.add_argument("-d", "--working_directory", type=str, default="assets/",
+                        help="The directory where to save the intermediate result files for the modules.")
+
+    args = parser.parse_args()
+
+    if not os.path.isdir(args.working_directory):
+        try:
+            os.makedirs(args.working_directory)
+        except OSError:
+            print("Creation of the directory %s failed" % args.working_directory)
+        else:
+            print("Successfully created the directory %s " % args.working_directory)
+    else:
+        print("Results are saved into existing directory '%s'" % args.working_directory)
+
+    wd = args.working_directory if args.working_directory[-1] == "/" else args.working_directory + "/"
+
+    parse_query_file(file_path=args.input_file, save_file_path=wd + "solution_dict")
+    collect_meta(file_path=wd + "solution_dict.yaml", config_file_path="meta_collector/config_postgres.yaml",
+                 save_file_path=wd + "meta_information")
+    communicate(input_file_path=wd + "meta_information.yaml", query_number=args.query_number,
+                nullqueries=args.nullqueries, save_file_path=wd + "fin_queries_with_cardinalities.csv",
                 config_file_path="meta_collector/config_postgres.yaml")
-    vectorize("assets/fin_queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
-    estimate("assets/main_py_test_vectorizer.csv", "estimator/config.yaml", "assets/model")
+    vectorize(wd + "fin_queries_with_cardinalities.csv", wd + "queries_with_cardinalites_vectors", "npy")
+    estimate(wd + "queries_with_cardinalites_vectors.npy", "estimator/config.yaml", wd + "model")
