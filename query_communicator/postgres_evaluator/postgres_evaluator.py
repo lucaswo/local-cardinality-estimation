@@ -125,7 +125,7 @@ class PostgresEvaluator:
                         save_readable[1])
                 for query_as_dict in self.query_data:
                     entry = f"{query_as_dict['query']} {query_as_dict['estimated_cardinality']} " \
-                            f"{query_as_dict['true_cardinality']}\n";
+                            f"{query_as_dict['true_cardinality']}\n"
 
                     f.write(entry)
 
