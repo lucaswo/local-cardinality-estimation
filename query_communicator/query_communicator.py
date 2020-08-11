@@ -1,5 +1,6 @@
 import csv
 from typing import List
+import os.path as path
 
 import numpy as np
 
@@ -55,15 +56,14 @@ class QueryCommunicator:
         # generate 150% queries
         query_number_with_buffer = int(query_number * 1.5)
 
-        # temporary file path for the csv from the generator, which will be evaluated and reduced afterwards
-        temp_file_path = '/'.join(save_file_path.split('/')[:-1]) + '/temp_' \
-                         + save_file_path.split('/')[-1].split('.')[0]
+        # intermediate file path for the csv from the generator, which will be evaluated and reduced afterwards
+        inter_file_path = path.join(path.dirname(save_file_path),'inter_' + path.basename(save_file_path))
 
         # number of distinct queries
         generator = SQLGenerator(config=self.meta)
-        generator.generate_queries(qnumber=query_number_with_buffer, save_readable=temp_file_path)
+        generator.generate_queries(qnumber=query_number_with_buffer, save_readable=inter_file_path)
 
-        evaluator = DatabaseEvaluator(input_file_name=temp_file_path + '.csv', database_connector=database_connector)
+        evaluator = DatabaseEvaluator(input_file_name=inter_file_path + '.csv', database_connector=database_connector)
         evaluator.get_cardinalities(eliminate_null_queries=True, save_file_path=save_file_path)
         reduced_queries = self.reduce_queries(query_number=query_number, save_file_path=save_file_path)
 
