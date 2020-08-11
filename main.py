@@ -2,7 +2,6 @@ import argparse
 import os
 
 import numpy as np
-import os
 
 from query_parser import QueryParser, QueryFormat
 from database_connector import DatabaseConnector, Database
@@ -92,7 +91,7 @@ if __name__ == "__main__":
     communicate(input_file_path=os.path.join(wd, "meta_information.yaml"), query_number=args.query_number,
                 nullqueries=args.nullqueries, save_file_path=os.path.join(wd, "fin_queries_with_cardinalities.csv"),
                 config_file_path="meta_collector/config_postgres.yaml")
-    vectorize(os.path.join(wd, "assets", "fin_queries_with_cardinalities.csv"), "assets", "vectorizer_results", 
+    vectorize(os.path.join(wd, "fin_queries_with_cardinalities.csv"), wd, "vectorizer_results", 
                            "main_py_test_vectors", "csv")
-    estimate(os.path.join(wd, "assets", "vectorizer_results"), os.path.join(wd, "estimator", "config.yaml"), 
-                          os.path.join(wd, "assets", "model"))
+    estimate(os.path.join(wd, "vectorizer_results"), os.path.join("estimator", "config.yaml"), 
+                          os.path.join(wd, "model"))
