@@ -32,13 +32,15 @@ class QueryCommunicator:
         :return:
         '''
 
+        temp_file_path = '/'.join(save_file_path.split('/')[:-1]) + '/temp_' \
+                         + save_file_path.split('/')[-1].split('.')[0]
         generator = SQLGenerator(config=self.meta)
         print("generate ", query_number, " queries")
-        generator.generate_queries(qnumber=query_number, save_readable='../assets/null_including_queries')
+        generator.generate_queries(qnumber=query_number, save_readable=temp_file_path)
 
-        evaluator = DatabaseEvaluator(input_file_name='null_including_queries.csv',
+        evaluator = DatabaseEvaluator(input_file_name=temp_file_path + '.csv',
                                       database_connector=database_connector)
-        evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path = save_file_path)
+        evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path=save_file_path)
 
     def get_nullfree_queries(self, query_number: int, save_file_path: str, database_connector: DatabaseConnector):
         '''
@@ -53,11 +55,15 @@ class QueryCommunicator:
         # generate 150% queries
         query_number_with_buffer = int(query_number * 1.5)
 
+        # temporary file path for the csv from the generator, which will be evaluated and reduced afterwards
+        temp_file_path = '/'.join(save_file_path.split('/')[:-1]) + '/temp_' \
+                         + save_file_path.split('/')[-1].split('.')[0]
+
         # number of distinct queries
         generator = SQLGenerator(config=self.meta)
-        generator.generate_queries(qnumber=query_number_with_buffer, save_readable='assets/nullfree_queries')
+        generator.generate_queries(qnumber=query_number_with_buffer, save_readable=temp_file_path)
 
-        evaluator = DatabaseEvaluator(input_file_name='nullfree_queries.csv', database_connector=database_connector)
+        evaluator = DatabaseEvaluator(input_file_name=temp_file_path + '.csv', database_connector=database_connector)
         evaluator.get_cardinalities(eliminate_null_queries=True, save_file_path=save_file_path)
         reduced_queries = self.reduce_queries(query_number=query_number, save_file_path=save_file_path)
 
