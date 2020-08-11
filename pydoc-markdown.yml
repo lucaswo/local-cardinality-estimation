@@ -42,9 +42,9 @@ renderer:
       children:
         - title: Postgres-Evaluator Class
           contents:
-            - query_communicator.postgres_evaluator.postgres_evaluator.*
+            - query_communicator.database_evaluator.database_evaluator.*
         - title: Postgres-Evaluator Readme
-          source: query_communicator/postgres_evaluator/README.md
+          source: query_communicator/database_evaluator/README.md
     - title: Vectorizer
       children:
         - title: Vectorizer Class
