@@ -2,6 +2,7 @@ import numpy as np
 import csv
 from ast import literal_eval
 import itertools
+import os
 
 from typing import List, Tuple, Dict
 import re
@@ -27,7 +28,7 @@ class Vectorizer:
         self.operator_code_length = len(next(iter(Vectorizer.operators.values())))        
         self.querySetID_meta = {}
         self.vectorization_tasks = [] # may become a SimpleQueue in case of multithreading
-        self.vectorization_results = []
+        self.vectorization_results = {}
 
     def add_queries_with_cardinalities(self, queries_with_cardinalities_path: str):
         """
@@ -92,7 +93,9 @@ class Vectorizer:
         
         :return: List of np.array vectors whereas each row contains the vectorized query and appended maximal, estimated and true cardinality (in this order) 
         """
-
+        #FIXME numpy    1.17.4?
+        #FIXME python3  3.6.9
+        #TODO Mail an Lucas wenn fertig
         while len(self.vectorization_tasks) > 0:
             querySetID, query, max_card, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
             n_max_expressions = self.querySetID_meta[querySetID]["n_max_expressions"]
@@ -113,9 +116,11 @@ class Vectorizer:
             vector[-2] = self.__min_max_normalize(estimated_cardinality, max_card)
             vector[-1] = self.__min_max_normalize(true_cardinality, max_card)
 
-            vector = np.insert(vector, 0, querySetID, axis=0)
+            if querySetID in self.vectorization_results:
+                self.vectorization_results[querySetID].append(vector)
+            else:
+                self.vectorization_results[querySetID] = [vector]
 
-            self.vectorization_results.append(vector)
         return self.vectorization_results
 
     def __parse_expression(self, expression: str) -> Tuple[str, str, int]:
@@ -178,19 +183,31 @@ class Vectorizer:
         value = np.log(value)
         return float(value - min_value)/(max_value - min_value)
 
-    def save(self, path: str, filetypes : str): #TODO
+    def save(self, base_path: str, result_folder: str, base_filename : str, filetypes : str):
         """
         Stores the SQL query and corresponding vector at given path as NPY and TXT file.
 
-        :param path: path to a directory for saving
+        :param base_path: path to a directory for saving
+        :param result_folder: name of folder to create for storing multiple files. This argument is seperated from 
+            base_path to empathize the need for an extra folder, since multiple files are saved.
+        :param filename: filename without filetype. querySetID is appended for differentiation
         :param filetypes: string of file types must contain "csv" or "npy"
         """
+
+        assert "npy" in filetypes or  "csv" in filetypes, \
+        "Valid file extention must be given. filetypes argument must contain 'csv' and/or 'npy'"
         
-        assert "npy" in filetypes or  "csv" in filetypes, "Valid file extention must be given. filetypes argument must contain 'csv' and/or 'npy'"
-        if "npy" in filetypes: 
-            np.save(f"{path}.npy", np.array(self.vectorization_results))
-        if "csv" in filetypes:
-            np.savetxt(f"{path}.csv", np.array(self.vectorization_results), delimiter=',', fmt="%.18g")
+        base_path = os.path.join(base_path, result_folder)
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
+        
+        # self.vectorization_results contains arrays of differnt length i.e. store a file for each querySetID
+        for querySetID, vectors in self.vectorization_results.items():
+            path = os.path.join(base_path, f"{base_filename}_{querySetID}")
+            if "npy" in filetypes: 
+                np.save(f"{path}.npy", np.array(vectors))
+            if "csv" in filetypes:
+                np.savetxt(f"{path}.csv", np.array(vectors), delimiter=',', fmt="%.18g")
 
 def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: List[Dict[str, int]]) -> np.array:
     """

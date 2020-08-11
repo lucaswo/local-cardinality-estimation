@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 from query_parser import QueryParser, QueryFormat
 from database_connector import DatabaseConnector, Database
@@ -23,27 +24,26 @@ def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
     db_conn.close_database_connection()
 
 
-def vectorize(queries_with_cardinalities_csv_path: str, output_file_path: str, filetype: str):
+def vectorize(queries_with_cardinalities_csv_path: str, output_base_path: str, output_result_folder: str, output_base_filename : str, output_filetypes: str):
     vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities(queries_with_cardinalities_csv_path)
     vectorizer.vectorize()
-    vectorizer.save(output_file_path, filetype)
+    vectorizer.save(output_base_path, output_result_folder, output_base_filename, output_filetypes)
 
 
-def estimate(data_file_path: str, config_file_path: str, save_model_file_path: str):
-    loaded_data = []
-    if data_file_path.split(".")[-1] == "csv":
-        loaded_data = np.genfromtxt(data_file_path, delimiter=",")
-    elif data_file_path.split(".")[-1] == "npy":
-        loaded_data = np.load(data_file_path)
+def estimate(data_path: str, config_file_path: str, save_model_file_path: str):
 
-    query_set_ids = set([x.astype(int) for x in loaded_data[:, 0]])
+    files = [os.path.join(data_path, f) for f in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, f))]
+    for file in files:
+        loaded_data = []
+        root, extension = os.path.splitext(file)
+        query_set_id = int(os.path.basename(root).rsplit("_")[-1])
+        if extension == ".csv":
+            loaded_data = np.genfromtxt(file, delimiter=",")
+        elif extension == ".npy":
+            loaded_data = np.load(file)
 
-    for query_set_id in query_set_ids:
-        data = loaded_data[np.where(loaded_data[:, 0].astype(int) == query_set_id)]
-        data = data[:, 1:]
-
-        estimator = Estimator(config_file_path=config_file_path, data=data)
+        estimator = Estimator(config_file_path=config_file_path, data=loaded_data)
         estimator.run(save_model_file_path=save_model_file_path + "_{}".format(query_set_id))
 
 
@@ -63,5 +63,5 @@ if __name__ == "__main__":
     communicate(input_file_path='assets/meta_information.yaml', query_number=10, nullqueries=False,
                 save_file_path='assets/fin_queries_with_cardinalities.csv',
                 config_file_path="meta_collector/config_postgres.yaml")
-    vectorize("assets/fin_queries_with_cardinalities.csv", "assets/main_py_test_vectorizer", "csv")
-    estimate("assets/main_py_test_vectorizer.csv", "estimator/config.yaml", "assets/model")
+    vectorize("assets/fin_queries_with_cardinalities.csv", "assets", "vectorizer_results", "main_py_test_vectors", "csv")
+    estimate("assets/vectorizer_results", "estimator/config.yaml", "assets/model")
