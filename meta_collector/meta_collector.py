@@ -6,6 +6,7 @@ import yaml
 from sklearn.preprocessing import LabelEncoder
 
 from database_connector import Database, DatabaseConnector
+from progressbar import ProgressBar
 
 
 class CreationMode(Enum):
@@ -367,17 +368,20 @@ class MetaCollector:
         with open(file_path) as file:
             batch = yaml.safe_load(file)
 
-        for index in batch:
-            solution_dict = {index: self.get_meta(table_names=batch[index]["table_names"],
-                                                  columns=batch[index]["selection_attributes"],
-                                                  join_atts=batch[index]["join_attributes"],
-                                                  save=False, batchmode=True, mode=mode)}
+        with ProgressBar(max_value=len(batch), redirect_stdout=True) as bar:
+            for index in batch:
+                bar.update(index)
 
-            if save:
-                if save_file_path:
-                    self.save_meta(solution_dict, save_file_path, mode="a+")
-                else:
-                    self.save_meta(solution_dict, mode="a+")
+                solution_dict = {index: self.get_meta(table_names=batch[index]["table_names"],
+                                                      columns=batch[index]["selection_attributes"],
+                                                      join_atts=batch[index]["join_attributes"],
+                                                      save=False, batchmode=True, mode=mode)}
+
+                if save:
+                    if save_file_path:
+                        self.save_meta(solution_dict, save_file_path, mode="a+")
+                    else:
+                        self.save_meta(solution_dict, mode="a+")
 
         return solution_dict
 
@@ -395,4 +399,3 @@ class MetaCollector:
 
         with open(file_name + ".yaml", mode) as file:
             yaml.safe_dump(meta_dict, file)
-
