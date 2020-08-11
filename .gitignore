@@ -160,3 +160,5 @@ vectorizer/*.csv
 docs
 .vscode
 
+# MacOS specific Files
+.DS_Store
