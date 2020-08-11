@@ -8,7 +8,8 @@ from typing import List, Tuple, Dict
 import re
 
 class Vectorizer:
-    """Constructs a vector consisting of operator code and normalized value for each predicate in the sql query set with set_query method."""
+    """Constructs a vector consisting of operator code and normalized value for each predicate in the sql query set 
+    with set_query method."""
     
     operators = {
             "=": [0,0,1],
@@ -32,28 +33,35 @@ class Vectorizer:
 
     def add_queries_with_cardinalities(self, queries_with_cardinalities_path: str):
         """
-        Reads CSV file with format (querySetID;query;encodings;max_card;min_max_step;estimated_cardinality;true_cardinality) whereas min_max_step is an array of the format 
-        [[1, 2, 1], [1, 113, 1], [1878, 2115, 1]] sorted by lexicographic order of corresponding predicates and encodings is an empty array if only integer values are processed. 
-        For a querySetID all predicates are collected and sorted in lexicographical order to provide correct indices (e.g. in encodings & min_max_value) for a given predicate.
+        Reads CSV file with format 
+        (querySetID;query;encodings;max_card;min_max_step;estimated_cardinality;true_cardinality) 
+        whereas min_max_step is an array of the format 
+        [[1, 2, 1], [1, 113, 1], [1878, 2115, 1]] sorted by lexicographic order of corresponding predicates and 
+        encodings is an empty array if only integer values are processed. 
+        For a querySetID all predicates are collected and sorted in lexicographical order to provide correct indices 
+        (e.g. in encodings & min_max_value) for a given predicate.
         Read queries are added to the list of vectorisation tasks.
 
-        :param queries_with_cardinalities_path: path to a CSV file containing all queries and their estimated and true cardinalities 
+        :param queries_with_cardinalities_path: path to a CSV file containing all queries and their estimated and 
+        true cardinalities 
         """
 
         with open(queries_with_cardinalities_path) as f:
             next(f) # skip header
             reader = csv.reader(f, delimiter=';')
-            # TODO: it is assumed, that the difference between lineendings in windows and linux are different. This causes empty arrays. Maybe use numpy instead of csv
+            # TODO: it is assumed, that the difference between lineendings in windows and linux are different. 
+            # This causes empty arrays. Maybe use numpy instead of csv
             reader = list(filter(lambda p: p, reader))
             for querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality in reader:
                 
                 querySetID = int(querySetID)
                 if querySetID not in self.querySetID_meta:
-                    self.querySetID_meta[querySetID] = {"predicates":[], "min_max_step":[], "n_max_expressions":0, "encodings":[]}
+                    self.querySetID_meta[querySetID] = {"predicates":[], "min_max_step":[], "n_max_expressions":0, \
+                        "encodings":[]}
 
                 expressions = query.split("WHERE", maxsplit=1)[1].split("AND")
                 # Matches join statements within WHERE clausel in a general manner. 
-                # E.g.: a=b a=abc is matched as join statement, but a="b" a='b' a=9 not (for all numbers and letters respectivley)
+                # E.g.: a=b a=abc is matched as join statement, but a="b" a='b' a=9 not 
                 join_matcher = re.compile(r'.+\s*=\s*[^\d"\']*$')
                 expressions = [expr for expr in expressions if not join_matcher.match(expr)]
 
@@ -91,14 +99,16 @@ class Vectorizer:
         """
         Vectorizes all vectorization tasks added.
         
-        :return: List of np.array vectors whereas each row contains the vectorized query and appended maximal, estimated and true cardinality (in this order) 
+        :return: List of np.array vectors whereas each row contains the vectorized query and appended maximal,
+             estimated and true cardinality (in this order) 
         """
 
         while len(self.vectorization_tasks) > 0:
             querySetID, query, max_card, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
             n_max_expressions = self.querySetID_meta[querySetID]["n_max_expressions"]
 
-            vector = np.zeros(n_max_expressions * (self.operator_code_length + 1) + 3) # constant 1 for each value; constant 3 for max_cardinality, estimated_cardinality, true_cardinality
+            # constant 1 for each value; constant 3 for max_cardinality, estimated_cardinality, true_cardinality
+            vector = np.zeros(n_max_expressions * (self.operator_code_length + 1) + 3) 
 
             # vectorize query
             for predicate, operator, value in query:
@@ -123,7 +133,8 @@ class Vectorizer:
 
     def __parse_expression(self, expression: str) -> Tuple[str, str, int]:
         """
-        Parses the given expression. Parsing does not rely on spaces before and after operator, since these could be omitted within a query. Returns parse result: predicate, operator and value.
+        Parses the given expression. Parsing does not rely on spaces before and after operator, since these could be 
+        omitted within a query. Returns parse result: predicate, operator and value.
 
         :param expression: an exptression of a WHERE clause (are usually seperated by AND/ OR) e.g. 'kind_id != 8'
         :return: a triple with predicate, operator and value
@@ -142,7 +153,8 @@ class Vectorizer:
 
     def __normalize(self, querySetID: int, predicate: str, value: int) -> float:
         """
-        Normalizes the value according to min-max statistics of the given predicate and the querySetID. If an encoding is avaiable for the predicate it is used.
+        Normalizes the value according to min-max statistics of the given predicate and the querySetID. If an encoding 
+        is avaiable for the predicate it is used.
         Normalization will result in value of range (0,1].
         
         :param querySetID: id of the querySet to get the meta data for the given predicate
@@ -207,7 +219,8 @@ class Vectorizer:
             if "csv" in filetypes:
                 np.savetxt(f"{path}.csv", np.array(vectors), delimiter=',', fmt="%.18g")
 
-def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: List[Dict[str, int]]) -> np.array:
+def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]], encoders: List[Dict[str, int]]) \
+        -> np.array:
     """
     Copy-pasted method of the original implementation for testing purposes; Only added Join detection
     
@@ -254,24 +267,39 @@ def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]
     return vector
 
 def vectorizer_tests():
-    """Test method to compare the original implementation with jupyter notebook output (truth) or with the Vectorizer implementation. Succeeds if no assertion throws an error."""
+    """Test method to compare the original implementation with jupyter notebook output (truth) or with the Vectorizer 
+    implementation. Succeeds if no assertion throws an error."""
 
     sql_queries = (
-        ["SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id < 2 AND mi_idx.info_type_id = 107 AND t.production_year > 2009;",
-            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id = 1 AND mi_idx.info_type_id < 80 AND t.production_year <= 1894;",
-            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id <= 1 AND mi_idx.info_type_id != 62 AND t.production_year <= 2094;",
-            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id >= 2 AND mi_idx.info_type_id > 45 AND t.production_year < 1939;",
-            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id = 2 AND mi_idx.info_type_id <= 32 AND t.production_year <= 1918;",
-            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id >= 2 AND mi_idx.info_type_id < 54 AND t.production_year <= 2097;",
-            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id <= 2 AND mi_idx.info_type_id >= 38 AND t.production_year < 1896;",
-            "SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id = 2 AND mi_idx.info_type_id <= 66 AND t.production_year = 2026;",]
+        ["""SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND 
+            t.id=mc.movie_id AND mc.company_type_id < 2 AND mi_idx.info_type_id = 107 AND t.production_year > 2009;""",
+            """SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id
+            =mc.movie_id AND mc.company_type_id = 1 AND mi_idx.info_type_id < 80 AND t.production_year <= 1894;""",
+            """SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id
+            =mc.movie_id AND mc.company_type_id <= 1 AND mi_idx.info_type_id != 62 AND t.production_year <= 2094;""",
+            """SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id
+            =mc.movie_id AND mc.company_type_id >= 2 AND mi_idx.info_type_id > 45 AND t.production_year < 1939;""",
+            """SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id
+            =mc.movie_id AND mc.company_type_id = 2 AND mi_idx.info_type_id <= 32 AND t.production_year <= 1918;""",
+            """SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id
+            =mc.movie_id AND mc.company_type_id >= 2 AND mi_idx.info_type_id < 54 AND t.production_year <= 2097;""",
+            """SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id
+            =mc.movie_id AND mc.company_type_id <= 2 AND mi_idx.info_type_id >= 38 AND t.production_year < 1896;""",
+            """SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id
+            =mc.movie_id AND mc.company_type_id = 2 AND mi_idx.info_type_id <= 66 AND t.production_year = 2026;""",]
         ,
-        ["SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id = 1 AND mk.keyword_id >= 117023 AND t.production_year <= 1894;", 
-            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id >= 1 AND mk.keyword_id < 35239 AND t.production_year <= 1896;", 
-            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id < 2 AND mk.keyword_id <= 35888 AND t.production_year != 2020;", 
-            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id = 2 AND mk.keyword_id > 196933 AND t.production_year = 1907;", 
-            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id != 1 AND mk.keyword_id < 19712 AND t.production_year < 1980;", 
-            "SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id > 1 AND mk.keyword_id <= 186471 AND t.production_year < 2110;"]
+        ["""SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id
+             AND mc.company_type_id = 1 AND mk.keyword_id >= 117023 AND t.production_year <= 1894;""", 
+            """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
+            _id AND mc.company_type_id >= 1 AND mk.keyword_id < 35239 AND t.production_year <= 1896;""", 
+            """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
+            _id AND mc.company_type_id < 2 AND mk.keyword_id <= 35888 AND t.production_year != 2020;""", 
+            """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
+            _id AND mc.company_type_id = 2 AND mk.keyword_id > 196933 AND t.production_year = 1907;""", 
+            """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
+            _id AND mc.company_type_id != 1 AND mk.keyword_id < 19712 AND t.production_year < 1980;""", 
+            """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
+            _id AND mc.company_type_id > 1 AND mk.keyword_id <= 186471 AND t.production_year < 2110;"""]
         )
     # alphabetically sorted
     min_max_step = ([[1, 2, 1], [1, 113, 1], [1878, 2115, 1]], 
@@ -287,19 +315,25 @@ def vectorizer_tests():
 
     # small vectorization test
     vectorizer = Vectorizer()
-    vectorizer.add_queries_with_cardinalities("assets/queries_with_cardinalities.csv")
-    vectorizer.add_queries_with_cardinalities("assets/queries_with_cardinalities.csv") # duplicated to sumulate adding of two query files
-    vectorizer_vectors = np.array(vectorizer.vectorize())
-    vectorizer_vectors = vectorizer_vectors[len(vectorizer_vectors)//2:,:]
+    vectorizer.add_queries_with_cardinalities(os.path.join("assets", "queries_with_cardinalities.csv"))
+    # duplicated to sumulate adding of two query files
+    # vectorizer.add_queries_with_cardinalities(os.path.join("assets", "queries_with_cardinalities.csv")) 
+    vectorizer_vectors = vectorizer.vectorize()
+    vectorizer_vectors = np.array(vectorizer_vectors[0])
+    
+    original_vectors = original_vectors[:vectorizer_vectors.shape[0]]
 
     print(sql_queries[0][0])
-    print(vectorizer_vectors[0,1:-3], len(vectorizer_vectors[0,1:-3]))
+    print(vectorizer_vectors[0,0:-3], len(vectorizer_vectors[0,0:-3]))
     print(original_vectors[0], len(original_vectors[0]))
 
-    assert np.allclose(vectorizer_vectors[:,1:-3], original_vectors),  f"{vectorizer_vectors[:,1:-3]} not close \n{original_vectors}"
+    assert np.allclose(vectorizer_vectors[:,:-3], original_vectors),   \
+        f"{vectorizer_vectors[:,:-3]} not close \n{original_vectors}"
     #vector_vectorizer, card_est, card_norm = vec[:-2], vec[-2], vec[-1]
     #assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
-    vectorizer.save("/mnt/data/programming/tmp/asset_queries_with_cardinalites_vectors", "csv") # will store duplicated results, due to indentical second query file 
+    # will store duplicated results, due to indentical second query file 
+    vectorizer.save("/mnt/data/programming/tmp/", "test_output_vectorizer", "asset_queries_with_cardinalites_vectors", \
+        "csv") 
 
 if __name__ == "__main__":
     vectorizer_tests()
