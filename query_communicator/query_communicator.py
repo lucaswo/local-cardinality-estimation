@@ -33,13 +33,14 @@ class QueryCommunicator:
         :return:
         '''
 
-        temp_file_path = '/'.join(save_file_path.split('/')[:-1]) + '/temp_' \
-                         + save_file_path.split('/')[-1].split('.')[0]
+        # intermediate file path for the csv from the generator, which will be evaluated and reduced afterwards
+        inter_file_path = path.join(path.dirname(save_file_path), 'inter_' + path.basename(save_file_path))
+
         generator = SQLGenerator(config=self.meta)
         print("generate ", query_number, " queries")
-        generator.generate_queries(qnumber=query_number, save_readable=temp_file_path)
+        generator.generate_queries(qnumber=query_number, save_readable=inter_file_path)
 
-        evaluator = DatabaseEvaluator(input_file_name=temp_file_path + '.csv',
+        evaluator = DatabaseEvaluator(input_file_name=inter_file_path + '.csv',
                                       database_connector=database_connector)
         evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path=save_file_path)
 
@@ -57,7 +58,7 @@ class QueryCommunicator:
         query_number_with_buffer = int(query_number * 1.5)
 
         # intermediate file path for the csv from the generator, which will be evaluated and reduced afterwards
-        inter_file_path = path.join(path.dirname(save_file_path),'inter_' + path.basename(save_file_path))
+        inter_file_path = path.join(path.dirname(save_file_path), 'inter_' + path.basename(save_file_path))
 
         # number of distinct queries
         generator = SQLGenerator(config=self.meta)
