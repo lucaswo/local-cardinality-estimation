@@ -93,9 +93,7 @@ class Vectorizer:
         
         :return: List of np.array vectors whereas each row contains the vectorized query and appended maximal, estimated and true cardinality (in this order) 
         """
-        #FIXME numpy    1.17.4?
-        #FIXME python3  3.6.9
-        #TODO Mail an Lucas wenn fertig
+
         while len(self.vectorization_tasks) > 0:
             querySetID, query, max_card, estimated_cardinality, true_cardinality = self.vectorization_tasks.pop(0)
             n_max_expressions = self.querySetID_meta[querySetID]["n_max_expressions"]
