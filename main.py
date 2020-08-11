@@ -65,7 +65,7 @@ if __name__ == "__main__":
                         help="The input file which contains the sql queries for the QueryParser.")
     parser.add_argument("-q", "--query_number", type=int, help="The number of queries you want for the result.",
                         default=10000)
-    parser.add_argument("-n", "--nullqueries", type=bool, default=False,
+    parser.add_argument("-n", "--nullqueries", action="store_true", default=False,
                         help="Whether to produce queries with the true cardinality 0. When disabling this option the "
                              "creation process takes a longer time.")
     parser.add_argument("-d", "--working_directory", type=str, default="assets/",

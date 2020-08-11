@@ -13,7 +13,8 @@ class DatabaseEvaluator:
     db_conn: DatabaseConnector = None
     debug: bool = None
 
-    def __init__(self, database_connector: DatabaseConnector, debug: bool = True, input_file_name: str = 'queries.csv'):
+    def __init__(self, database_connector: DatabaseConnector, debug: bool = True,
+                 input_file_path: str = 'assets/queries.csv'):
         """
         Initializer for the DatabaseEvaluator
 
@@ -22,7 +23,7 @@ class DatabaseEvaluator:
         Additionally the host and the port can be given if there not default (host: localhost, port: 5432).
 
         :param debug: boolean whether to print additional information while processing
-        :param input_file_name: name of the file used for the sql query import, have to be .csv or .sql and located in
+        :param input_file_path: name of the file used for the sql query import, have to be .csv or .sql and located in
             the asset folder
         :param database_connector: Handles the database connection to the desired database.
         """
@@ -31,12 +32,11 @@ class DatabaseEvaluator:
         self.debug = debug
 
         self.query_data = []
-        path = "assets/" + input_file_name
-        self.import_sql_queries(path)
+        self.import_sql_queries(input_file_path)
 
     def import_sql_queries(self, path):
         """
-        load the queries from sql or csv file, wich is provided by the sql_generator submodule
+        load the queries from sql or csv file, which is provided by the sql_generator submodule
         :param path: path to the file with the given queries (per default in asset folder), relative to the
             database_evaluator folder
         :return: void
@@ -106,8 +106,7 @@ class DatabaseEvaluator:
                 print("estimated cardinality: {}".format(esti_cardi))
             query_as_dict['estimated_cardinality'] = esti_cardi
 
-    def save_cardinalities(self, save_readable: Tuple[bool, str] = (True, 'assets/queries_with_cardinalities.txt'),
-                           save_file_path: str = 'assets/queries_with_cardinalities.csv',
+    def save_cardinalities(self, save_readable: bool = True, save_file_path: str = 'assets/queries_with_cardinalities',
                            eliminate_null_queries: bool = True):
         """
         execute the adapted queries against the database and calculate the postgres cardinality estimation for each
@@ -119,12 +118,11 @@ class DatabaseEvaluator:
         :return: void
         """
 
-        if save_readable[0]:
-            with open(save_readable[1], 'w') as f:
+        if save_readable:
+            with open(save_file_path + '.txt', 'w') as f:
                 if self.debug:
                     print("Save human readable queries and corresponing cardinalities(firstly estimated, secondly "
-                          "true) on ",
-                          save_readable[1])
+                          "true) on ", save_file_path + '.txt')
                 for query_as_dict in self.query_data:
                     entry = f"{query_as_dict['query']} {query_as_dict['estimated_cardinality']} " \
                             f"{query_as_dict['true_cardinality']}\n"
@@ -133,7 +131,7 @@ class DatabaseEvaluator:
 
         header = ['querySetID', 'query', 'encodings', 'max_card', 'min_max_step', 'estimated_cardinality',
                   'true_cardinality']
-        with open(save_file_path, 'w', newline='') as csvfile:
+        with open(save_file_path + '.csv', 'w', newline='') as csvfile:
             querywriter = csv.DictWriter(csvfile, delimiter=';', fieldnames=header)
             querywriter.writeheader()
             querycounter = 0
@@ -156,7 +154,7 @@ class DatabaseEvaluator:
             print("Added estimated and true cardinalities to query list")
 
     def get_cardinalities(self, eliminate_null_queries: bool = True,
-                          save_file_path: str = 'assets/queries_with_cardinalities.csv'):
+                          save_file_path: str = 'assets/queries_with_cardinalities'):
         """
         function that manage the whole process of cardinality estimation/calculation
         :param eliminate_null_queries: if True only queries with true cardinality > 0 will be saved
@@ -166,6 +164,5 @@ class DatabaseEvaluator:
 
         self.get_estimated_cardinalities()
         self.get_true_cardinalities()
-        self.save_cardinalities(eliminate_null_queries=eliminate_null_queries,
-                                save_readable=(True, 'assets/queries_with_cardinalities.txt'),
+        self.save_cardinalities(eliminate_null_queries=eliminate_null_queries, save_readable=True,
                                 save_file_path=save_file_path)

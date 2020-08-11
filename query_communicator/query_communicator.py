@@ -38,11 +38,10 @@ class QueryCommunicator:
 
         generator = SQLGenerator(config=self.meta)
         print("generate ", query_number, " queries")
-        generator.generate_queries(qnumber=query_number, save_readable=inter_file_path)
+        generator.generate_queries(qnumber=query_number, save_readable=inter_file_path.split(".")[0])
 
-        evaluator = DatabaseEvaluator(input_file_name=inter_file_path + '.csv',
-                                      database_connector=database_connector)
-        evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path=save_file_path)
+        evaluator = DatabaseEvaluator(input_file_path=inter_file_path, database_connector=database_connector)
+        evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path=save_file_path.split(".")[0])
 
     def get_nullfree_queries(self, query_number: int, save_file_path: str, database_connector: DatabaseConnector):
         '''
@@ -62,10 +61,10 @@ class QueryCommunicator:
 
         # number of distinct queries
         generator = SQLGenerator(config=self.meta)
-        generator.generate_queries(qnumber=query_number_with_buffer, save_readable=inter_file_path)
+        generator.generate_queries(qnumber=query_number_with_buffer, save_readable=inter_file_path.split(".")[0])
 
-        evaluator = DatabaseEvaluator(input_file_name=inter_file_path + '.csv', database_connector=database_connector)
-        evaluator.get_cardinalities(eliminate_null_queries=True, save_file_path=save_file_path)
+        evaluator = DatabaseEvaluator(input_file_path=inter_file_path, database_connector=database_connector)
+        evaluator.get_cardinalities(eliminate_null_queries=True, save_file_path=save_file_path.split(".")[0])
         reduced_queries = self.reduce_queries(query_number=query_number, save_file_path=save_file_path)
 
         self.write_queries(queries=reduced_queries, save_file_path=save_file_path)
