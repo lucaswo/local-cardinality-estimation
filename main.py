@@ -73,23 +73,26 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not os.path.isdir(args.working_directory):
+    wd = args.working_directory
+
+    if not os.path.isdir(wd):
         try:
-            os.makedirs(args.working_directory)
+            os.makedirs(wd)
         except OSError:
-            print("Creation of the directory %s failed" % args.working_directory)
+            print("Creation of the directory %s failed" % wd)
         else:
-            print("Successfully created the directory %s " % args.working_directory)
+            print("Successfully created the directory %s " % wd)
     else:
-        print("Results are saved into existing directory '%s'" % args.working_directory)
+        print("Results are saved into existing directory '%s'" % wd)
 
-    wd = args.working_directory if args.working_directory[-1] == "/" else args.working_directory + "/"
-
-    parse_query_file(file_path=args.input_file, save_file_path=wd + "solution_dict")
-    collect_meta(file_path=wd + "solution_dict.yaml", config_file_path="meta_collector/config_postgres.yaml",
-                 save_file_path=wd + "meta_information")
-    communicate(input_file_path=wd + "meta_information.yaml", query_number=args.query_number,
-                nullqueries=args.nullqueries, save_file_path=wd + "fin_queries_with_cardinalities.csv",
+    parse_query_file(file_path=args.input_file, save_file_path=os.path.join(wd, "solution_dict"))
+    collect_meta(file_path=os.path.join(wd, "solution_dict.yaml"),
+                 config_file_path="meta_collector/config_postgres.yaml",
+                 save_file_path=os.path.join(wd, "meta_information"))
+    communicate(input_file_path=os.path.join(wd, "meta_information.yaml"), query_number=args.query_number,
+                nullqueries=args.nullqueries, save_file_path=os.path.join(wd, "fin_queries_with_cardinalities.csv"),
                 config_file_path="meta_collector/config_postgres.yaml")
-    vectorize(wd + "fin_queries_with_cardinalities.csv", wd + "queries_with_cardinalites_vectors", "npy")
-    estimate(wd + "queries_with_cardinalites_vectors.npy", "estimator/config.yaml", wd + "model")
+    vectorize(os.path.join(wd, "fin_queries_with_cardinalities.csv"),
+              os.path.join(wd, "queries_with_cardinalites_vectors"), "npy")
+    estimate(os.path.join(wd, "queries_with_cardinalites_vectors.npy"), "estimator/config.yaml",
+             os.path.join(wd, "model"))
