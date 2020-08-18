@@ -55,7 +55,7 @@ class QueryCommunicator:
         '''
 
         # generate 150% queries
-        query_number_with_buffer = int(query_number * 1.5)
+        query_number_with_buffer = int(query_number * 2.0)
 
         # intermediate file path for the csv from the generator, which will be evaluated and reduced afterwards
         inter_file_path = path.join(path.dirname(save_file_path), 'inter_' + path.basename(save_file_path))

@@ -75,28 +75,44 @@ class DatabaseEvaluator:
     def get_true_cardinalities(self, query_number, eliminate_null_queries: bool):
         """
         execute the given queries against the database and calculate the true cardinality from each query
+        :param query_number: desired number of queries, if reached before query list (extended for nullquery reduction)
+            is comletly processed earlier abort for evaluation time savings
+        :param eliminate_null_queries: if True only queries with true cardinality > 0 will be saved
         :return: void
         """
 
-        query_counter: int = 0
-        for query_as_dict in self.query_data:
-            if (query_counter >= query_number):
-                break
-            self.db_conn.execute(query_as_dict['query'])
-            output = self.db_conn.fetchone()
-            true_cardi = output[0]
-            if not eliminate_null_queries:
-                query_counter += 1
-            elif true_cardi != 0 and eliminate_null_queries:
-                query_counter += 1
-            if self.debug:
-                print("true cardinality ('count(*)'): {}".format(true_cardi))
-            query_as_dict['true_cardinality'] = true_cardi
-            #print("query counter: ", query_counter)
+        if eliminate_null_queries:
+            query_counter: int = 0
+            current_query_set_id: int = 0
+            for query_as_dict in self.query_data:
+                if current_query_set_id == int(query_as_dict['querySetID']):
+                    if query_counter < query_number:
+                        self.db_conn.execute(query_as_dict['query'])
+                        output = self.db_conn.fetchone()
+                        true_cardi = output[0]
+                        if true_cardi != 0:
+                            query_counter += 1
+                        if self.debug:
+                            print("true cardinality ('count(*)'): {}".format(true_cardi))
+                        query_as_dict['true_cardinality'] = true_cardi
+                    else:
+                        current_query_set_id += 1
+                        query_counter = 0
+        else:
+             for query_as_dict in self.query_data:
+                self.db_conn.execute(query_as_dict['query'])
+                output = self.db_conn.fetchone()
+                true_cardi = output[0]
+                if self.debug:
+                    print("true cardinality ('count(*)'): {}".format(true_cardi))
+                    query_as_dict['true_cardinality'] = true_cardi
+
 
     def get_estimated_cardinalities(self, query_number: int):
         """
         execute the adapted queries against the database and calculate the postgres cardinality estimation for each query
+        :param query_number: desired number of queries, if reached before query list (extended for nullquery reduction)
+            is comletly processed earlier abort for evaluation time savings
         :return: void
         """
 
@@ -178,7 +194,7 @@ class DatabaseEvaluator:
         :return: void
         """
 
-        self.get_estimated_cardinalities(query_number)
         self.get_true_cardinalities(query_number=query_number, eliminate_null_queries=eliminate_null_queries)
+        self.get_estimated_cardinalities(query_number)
         self.save_cardinalities(eliminate_null_queries=eliminate_null_queries, save_readable=True,
                                 save_file_path=save_file_path)
