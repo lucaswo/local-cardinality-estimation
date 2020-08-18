@@ -72,7 +72,7 @@ class DatabaseEvaluator:
             explain_query = "EXPLAIN " + tmp[0] + "*" + tmp[1]
             query_as_dict['explain_query'] = explain_query
 
-    def get_true_cardinalities(self, query_number):
+    def get_true_cardinalities(self, query_number, eliminate_null_queries: bool):
         """
         execute the given queries against the database and calculate the true cardinality from each query
         :return: void
@@ -85,12 +85,14 @@ class DatabaseEvaluator:
             self.db_conn.execute(query_as_dict['query'])
             output = self.db_conn.fetchone()
             true_cardi = output[0]
-            if (true_cardi != 0):
+            if not eliminate_null_queries:
+                query_counter += 1
+            elif true_cardi != 0 and eliminate_null_queries:
                 query_counter += 1
             if self.debug:
                 print("true cardinality ('count(*)'): {}".format(true_cardi))
             query_as_dict['true_cardinality'] = true_cardi
-            print("query counter: ", query_counter)
+            #print("query counter: ", query_counter)
 
     def get_estimated_cardinalities(self, query_number: int):
         """
@@ -124,7 +126,7 @@ class DatabaseEvaluator:
         """
 
         # delete queries with estimated but without true cardinalities (because evaluation of true cardinalities was aborted on satisfied number of queries)
-        query_data_copy : list = []
+        query_data_copy: list = []
         for query_as_dict in self.query_data:
             if ("estimated_cardinality" in query_as_dict) and ("true_cardinality" in query_as_dict):
                 query_data_copy.append(query_as_dict)
@@ -177,6 +179,6 @@ class DatabaseEvaluator:
         """
 
         self.get_estimated_cardinalities(query_number)
-        self.get_true_cardinalities(query_number)
+        self.get_true_cardinalities(query_number=query_number, eliminate_null_queries=eliminate_null_queries)
         self.save_cardinalities(eliminate_null_queries=eliminate_null_queries, save_readable=True,
                                 save_file_path=save_file_path)
