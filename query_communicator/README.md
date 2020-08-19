@@ -28,7 +28,7 @@ Anyway, if you want to use it seperatly, here are the needed instructions and ex
     ```
     Choose the Database you use as parameter.
 
-2. **Set up the communicator and produce queries**
+**2. Set up the communicator and produce queries**
 
 	To iniatialize the Communicator, you need a valid .yaml File as input 
 	with the corresponding meta Information.
@@ -95,7 +95,7 @@ Anyway, if you want to use it seperatly, here are the needed instructions and ex
     Anyway, if you want to eliminate queries with cardinality zero, it's possible you get less queries then requestet. 
     The Submodule *SQLGenerator* will generate 200% queries. During the evaluation, everything with cardinality 0 or the queries that are to much, will be ignored. Sometimes there are only a few queries whose cardinality is not zero in the generated Queries. So the desired number is not reachable. You will get a feedback from the module, how many queries were generated for each SetID.
 
-3. Close Database Connection
+**3. Close Database Connection**
     ```python
     db_conn.close_database_connection()
     ```
