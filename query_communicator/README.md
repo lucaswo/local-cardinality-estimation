@@ -24,7 +24,7 @@ Anyway, if you want to use it seperatly, here are the needed instructions and ex
     Then call the folling functions:
     ```python
     db_conn = DatabaseConnector(database=Database.POSTGRES)
-    db_conn.connect(config_file_path=config_file_path)
+    db_conn.connect(config_file_path='config.yaml')
     ```
     Choose the Database you use as parameter.
 
@@ -78,8 +78,8 @@ Anyway, if you want to use it seperatly, here are the needed instructions and ex
     Now you can initialize the communicator and let it produce the queries:
 
     ```python
-    communicator = QueryCommunicator(meta_file_path=input_file_path)
-    communicator.produce_queries(query_number=query_number, nullqueries=nullqueries, save_file_path=save_file_path,
+    communicator = QueryCommunicator(meta_file_path='meta_information.yaml')
+    communicator.produce_queries(query_number=10, nullqueries=False, save_file_path='results/queries.csv',
                                      database_connector=db_conn)
     ```
     You have to specify...
