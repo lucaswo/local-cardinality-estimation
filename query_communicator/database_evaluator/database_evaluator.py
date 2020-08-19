@@ -1,8 +1,8 @@
 import csv
 
 from database_connector import DatabaseConnector
-from progressbar import ProgressBar
-import progressbar
+from progressbar import ProgressBar,Bar,Counter,Timer
+
 
 class DatabaseEvaluator:
     """
@@ -81,17 +81,19 @@ class DatabaseEvaluator:
         :param eliminate_null_queries: if True only queries with true cardinality > 0 will be saved
         :return: void
         """
-        query_counter: int = 0
-        current_query_set_id: int = 0
         max_value = int(self.query_data[-1]['querySetID']) + 1
         print('Evaluating %d Query sets for the true cardinalities.' % max_value)
 
-        with ProgressBar(widgets=['Query Set ',progressbar.Counter(format='(%(value)d of %(max_value)d)'),progressbar.Bar(),progressbar.Timer()],
-                         max_value=max_value, redirect_stdout= True) as bar:
-            bar.update(current_query_set_id)
-            for query_as_dict in self.query_data:
-                if current_query_set_id == int(query_as_dict['querySetID']):
+        for current_query_set_id in range(max_value):
+            query_list_i = list(filter(lambda i: i['querySetID'] == str(current_query_set_id),self.query_data))
+            query_counter: int = 0
+
+            with ProgressBar(widgets=['Query Set %d/%d ' % (current_query_set_id + 1, max_value), Bar(),
+                            ' ', Counter(format='%(value)d/%(max_value)d'), ' ', Timer()],
+                             max_value=query_number, redirect_stdout=True) as bar:
+                for query_as_dict in query_list_i:
                     if query_counter < query_number:
+                        bar.update(query_counter + 1)
                         self.db_conn.execute(query_as_dict['query'])
                         output = self.db_conn.fetchone()
                         true_cardi = output[0]
@@ -101,11 +103,9 @@ class DatabaseEvaluator:
                             query_counter += 1
                         if self.debug:
                             print("true cardinality ('count(*)'): {}".format(true_cardi))
-                        query_as_dict['true_cardinality'] = true_cardi
-                    else:
-                        current_query_set_id += 1
-                        query_counter = 0
-                        bar.update(value = current_query_set_id)
+
+                        self.query_data[self.query_data.index(query_as_dict)]['true_cardinality'] = true_cardi
+
 
 
     def get_estimated_cardinalities(self, query_number: int):
