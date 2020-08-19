@@ -1,7 +1,8 @@
 import csv
 
 from database_connector import DatabaseConnector
-
+from progressbar import ProgressBar
+import progressbar
 
 class DatabaseEvaluator:
     """
@@ -80,17 +81,23 @@ class DatabaseEvaluator:
         :param eliminate_null_queries: if True only queries with true cardinality > 0 will be saved
         :return: void
         """
+        query_counter: int = 0
+        current_query_set_id: int = 0
+        max_value = int(self.query_data[-1]['querySetID']) + 1
+        print('Evaluating %d Query sets for the true cardinalities.' % max_value)
 
-        if eliminate_null_queries:
-            query_counter: int = 0
-            current_query_set_id: int = 0
+        with ProgressBar(widgets=['Query Set ',progressbar.Counter(format='(%(value)d of %(max_value)d)'),progressbar.Bar(),progressbar.Timer()],
+                         max_value=max_value, redirect_stdout= True) as bar:
+            bar.update(current_query_set_id)
             for query_as_dict in self.query_data:
                 if current_query_set_id == int(query_as_dict['querySetID']):
                     if query_counter < query_number:
                         self.db_conn.execute(query_as_dict['query'])
                         output = self.db_conn.fetchone()
                         true_cardi = output[0]
-                        if true_cardi != 0:
+                        if eliminate_null_queries and true_cardi != 0:
+                            query_counter += 1
+                        elif not eliminate_null_queries:
                             query_counter += 1
                         if self.debug:
                             print("true cardinality ('count(*)'): {}".format(true_cardi))
@@ -98,14 +105,7 @@ class DatabaseEvaluator:
                     else:
                         current_query_set_id += 1
                         query_counter = 0
-        else:
-             for query_as_dict in self.query_data:
-                self.db_conn.execute(query_as_dict['query'])
-                output = self.db_conn.fetchone()
-                true_cardi = output[0]
-                if self.debug:
-                    print("true cardinality ('count(*)'): {}".format(true_cardi))
-                    query_as_dict['true_cardinality'] = true_cardi
+                        bar.update(value = current_query_set_id)
 
 
     def get_estimated_cardinalities(self, query_number: int):

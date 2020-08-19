@@ -3,10 +3,12 @@ from enum import Enum
 from typing import List, Tuple, Dict
 
 import yaml
+import progressbar
 from sklearn.preprocessing import LabelEncoder
 
 from database_connector import Database, DatabaseConnector
 from progressbar import ProgressBar
+
 
 
 class CreationMode(Enum):
@@ -368,7 +370,8 @@ class MetaCollector:
         with open(file_path) as file:
             batch = yaml.safe_load(file)
 
-        with ProgressBar(max_value=len(batch), redirect_stdout=True) as bar:
+        with ProgressBar(widgets=['Meta Data collected ',progressbar.Counter(format='(%(value)d of %(max_value)d)'),progressbar.Bar(),progressbar.Timer()],
+                         max_value=len(batch), redirect_stdout=True) as bar:
             for index in batch:
                 bar.update(index)
 
