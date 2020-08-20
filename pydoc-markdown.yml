@@ -10,6 +10,16 @@ renderer:
     - title: Home
       name: index
       source: README.md
+
+
+    - title: DatabaseConnector
+      children:
+        - title: DatabaseConnector Class
+          contents:
+            - database_connector.database_connector.*
+        - title: DatabaseConnector Readme
+          source: database_connector/README.md
+
     - title: QueryParser
       children:
         - title: QueryParser Class
@@ -17,6 +27,28 @@ renderer:
             - query_parser.query_parser.*
         - title: QueryParser Readme
           source: query_parser/README.md
+
+    - title: QueryCommunicator
+      children:
+        - title: QueryCommunicator Class
+          contents:
+            - query_communicator.query_communicator.*
+        #- title: QueryCommunicator Readme
+        #  source: query_communicator/README.md
+          children:
+            - title: DatabaseEvaluator Class
+              contents:
+                - database_evaluator.database_evaluator.*
+            - title: DatabaseEvaluator Readme
+              source: query_communicator/database_evaluator/README.md
+            - title: SQLGenerator Class
+              contents:
+                - sqlgenerator.sqlgenerator.*
+            - title: SQLGenerator Readme
+              source: query_communicator/sql_generator/README.md
+        
+
+
     - title: Meta-Collector
       children:
         - title: Meta-Collector Class
@@ -24,20 +56,7 @@ renderer:
             - meta_collector.meta_collector.*
         - title: Meta-Collector Readme
           source: meta_collector/README.md
-    - title: SQL-Generator
-      children:
-        - title: SQL-Generator Class
-          contents:
-              - sql_generator.sql_generator.*
-        - title: SQL-Generator Readme
-          source: sql_generator/README.md
-    - title: Postgres-Evaluator
-      children:
-        - title: Postgres-Evaluator Class
-          contents:
-            - database_evaluator.database_evaluator.*
-        - title: Postgres-Evaluator Readme
-          source: database_evaluator/README.md
+
     - title: Vectorizer
       children:
         - title: Vectorizer Class
@@ -45,6 +64,7 @@ renderer:
             - vectorizer.vectorizer.*
         - title: Vectorizer Readme
           source: vectorizer/README.md
+
     - title: Estimator
       children:
         - title: Estimator Class
@@ -52,6 +72,7 @@ renderer:
             - estimator.estimator.*
         - title: Estimator Readme
           source: estimator/README.md
+          
   mkdocs_config:
     site_name: Local Cardinality Estimation
     repo_url: https://gitlab.hrz.tu-chemnitz.de/ddsg/ml4sys/local-cardinality-estimation
