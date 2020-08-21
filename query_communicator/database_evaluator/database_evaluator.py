@@ -93,7 +93,7 @@ class DatabaseEvaluator:
                              max_value=query_number, redirect_stdout=True) as bar:
                 for query_as_dict in query_list_i:
                     if query_counter < query_number:
-                        bar.update(query_counter + 1)
+                        bar.update(query_counter,True)
                         self.db_conn.execute(query_as_dict['query'])
                         output = self.db_conn.fetchone()
                         true_cardi = output[0]
