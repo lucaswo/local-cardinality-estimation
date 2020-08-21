@@ -6,7 +6,7 @@ import yaml
 from sklearn.preprocessing import LabelEncoder
 
 from database_connector import Database, DatabaseConnector
-from progressbar import ProgressBar
+from progressbar import ProgressBar, Counter, Bar, Timer
 
 
 class CreationMode(Enum):
@@ -314,9 +314,7 @@ class MetaCollector:
         elif self.db_conn.database == Database.SQLITE:
             columns_data = self.get_columns_data_sqlite(table_names=table_names, columns=columns)
         else:
-            raise ValueError("Invlid Database Connection!")
-
-        print(columns_data)
+            raise ValueError("Invalid Database Connection!")
 
         if mode == CreationMode.NONE:
             max_card = self.get_max_card(table_names=table_names, join_atts=join_atts)
@@ -368,9 +366,11 @@ class MetaCollector:
         with open(file_path) as file:
             batch = yaml.safe_load(file)
 
-        with ProgressBar(max_value=len(batch), redirect_stdout=True) as bar:
+        with ProgressBar(
+                widgets=['Meta Data collected ', Counter(format='(%(value)d of %(max_value)d)'), Bar(), Timer()],
+                max_value=len(batch), redirect_stdout=True) as bar:
             for index in batch:
-                bar.update(index)
+                bar.update(index, True)
 
                 solution_dict = {index: self.get_meta(table_names=batch[index]["table_names"],
                                                       columns=batch[index]["selection_attributes"],
