@@ -65,10 +65,9 @@ in the meta file
        generator.generate_queries(qnumber=100, save_readable = 'queries')
         ```
        You also have the possibility to specify the filename for the queries.
-       Note that you just specify the name (e.g.'movie_queries') and not hte format. 
+       Note that you just specify the name (e.g.'movie_queries') and not the format. 
        The Generator will safe a csv file (usable for vectorizer) and a human readable sql file with the specified name 
        in the assets directory.
        Default is *queries.csv/queries.sql*.
        
-    
     
