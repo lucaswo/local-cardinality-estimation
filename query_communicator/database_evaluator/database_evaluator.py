@@ -13,7 +13,7 @@ class DatabaseEvaluator:
     db_conn: DatabaseConnector = None
     debug: bool = None
 
-    def __init__(self, database_connector: DatabaseConnector, debug: bool = True,
+    def __init__(self, database_connector: DatabaseConnector, debug: bool = False,
                  input_file_path: str = 'assets/queries.csv'):
         """
         Initializer for the DatabaseEvaluator

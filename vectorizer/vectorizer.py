@@ -1,16 +1,16 @@
-import numpy as np
 import csv
-from ast import literal_eval
-import itertools
 import os
-
-from typing import List, Tuple, Dict
 import re
+from ast import literal_eval
+from typing import List, Tuple, Dict
+
+import numpy as np
+
 
 class Vectorizer:
     """Constructs a vector consisting of operator code and normalized value for each predicate in the sql query set 
     with set_query method."""
-    
+
     operators = {
             "=": [0,0,1],
             ">": [0,1,0],
@@ -26,7 +26,7 @@ class Vectorizer:
         Intitialises the Vectorizer object by defining available operators.
         """
 
-        self.operator_code_length = len(next(iter(Vectorizer.operators.values())))        
+        self.operator_code_length = len(next(iter(Vectorizer.operators.values())))
         self.querySetID_meta = {}
         self.vectorization_tasks = [] # may become a SimpleQueue in case of multithreading
         self.vectorization_results = {}
@@ -53,7 +53,7 @@ class Vectorizer:
             # This causes empty arrays. Maybe use numpy instead of csv
             reader = list(filter(lambda p: p, reader))
             for querySetID, query, encodings, max_card, min_max_step, estimated_cardinality, true_cardinality in reader:
-                
+
                 querySetID = int(querySetID)
                 if querySetID not in self.querySetID_meta:
                     self.querySetID_meta[querySetID] = {"predicates":[], "min_max_step":[], "n_max_expressions":0, \
@@ -66,7 +66,7 @@ class Vectorizer:
                 expressions = [expr for expr in expressions if not join_matcher.match(expr)]
 
                 query_parsed = [self.__parse_expression(expression) for expression in expressions]
-                
+
                 if len(query_parsed) > self.querySetID_meta[querySetID]["n_max_expressions"]:
                     self.querySetID_meta[querySetID]["n_max_expressions"] = len(query_parsed)
 
@@ -78,10 +78,10 @@ class Vectorizer:
                     enc = literal_eval(encodings)
                     if enc == []:
                         self.querySetID_meta[querySetID]["encodings"] = None
-                
+
                 if self.querySetID_meta[querySetID]["min_max_step"] == []:
                     self.querySetID_meta[querySetID]["min_max_step"] = literal_eval(min_max_step)
-        
+
                 self.vectorization_tasks.append((
                     querySetID,
                     query_parsed,
@@ -89,7 +89,7 @@ class Vectorizer:
                     int(estimated_cardinality),
                     int(true_cardinality)
                     ))
-        
+
         # sort all predicates for a querySetID to correctly retrieve the index within encodings and min_max_step
         for querySetID, meta in self.querySetID_meta.items():
             meta["predicates"].sort()
@@ -108,7 +108,7 @@ class Vectorizer:
             n_max_expressions = self.querySetID_meta[querySetID]["n_max_expressions"]
 
             # constant 1 for each value; constant 3 for max_cardinality, estimated_cardinality, true_cardinality
-            vector = np.zeros(n_max_expressions * (self.operator_code_length + 1) + 3) 
+            vector = np.zeros(n_max_expressions * (self.operator_code_length + 1) + 3)
 
             # vectorize query
             for predicate, operator, value in query:
@@ -118,7 +118,7 @@ class Vectorizer:
                 end_idx = idx * (self.operator_code_length + 1) + self.operator_code_length
                 vector[idx*(self.operator_code_length+1):end_idx] = Vectorizer.operators[operator]
                 vector[end_idx] = value_normalzed
-                
+
             # normalize/set cardinality information
             vector[-3] = max_card
             vector[-2] = self.__min_max_normalize(estimated_cardinality, max_card)
@@ -166,18 +166,18 @@ class Vectorizer:
         predicate_idx = self.querySetID_meta[querySetID]["predicates"].index(predicate)
         min_val, max_val, step = self.querySetID_meta[querySetID]["min_max_step"][predicate_idx]
         encoding = self.querySetID_meta[querySetID]["encodings"]
-        
+
         encoded_value = value
         if encoding is not None:
             encoding = encoding[predicate_idx]
             if value in encoding.keys():
                 encoded_value = encoding[value]
-        
+
         if value == encoded_value:
             encoded_value = max(min_val, float(value))
-            
+
         return (encoded_value - min_val + step) / (max_val - min_val + step)
-    
+
 
     def __min_max_normalize(self, value: float, max_cardinality: int, min_value: int = 0) -> float:
         """
@@ -206,15 +206,15 @@ class Vectorizer:
 
         assert "npy" in filetypes or  "csv" in filetypes, \
         "Valid file extention must be given. filetypes argument must contain 'csv' and/or 'npy'"
-        
+
         base_path = os.path.join(base_path, result_folder)
         if not os.path.exists(base_path):
             os.makedirs(base_path)
-        
+
         # self.vectorization_results contains arrays of differnt length i.e. store a file for each querySetID
         for querySetID, vectors in self.vectorization_results.items():
             path = os.path.join(base_path, f"{base_filename}_{querySetID}")
-            if "npy" in filetypes: 
+            if "npy" in filetypes:
                 np.save(f"{path}.npy", np.array(vectors))
             if "csv" in filetypes:
                 np.savetxt(f"{path}.csv", np.array(vectors), delimiter=',', fmt="%.18g")
@@ -243,7 +243,7 @@ def vectorize_query_original(query: str, min_max: Dict[str, Tuple[int, int, int]
         "!=": [1,1,0],
         "IS": [0,0,1]
     }
-    
+
     # not quite the original anymore due to query file adaptions
     join_matcher = re.compile(r'.+\s*=\s*[^\d"\']*$')
     exps = []
@@ -289,20 +289,20 @@ def vectorizer_tests():
             =mc.movie_id AND mc.company_type_id = 2 AND mi_idx.info_type_id <= 66 AND t.production_year = 2026;""",]
         ,
         ["""SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id
-             AND mc.company_type_id = 1 AND mk.keyword_id >= 117023 AND t.production_year <= 1894;""", 
+             AND mc.company_type_id = 1 AND mk.keyword_id >= 117023 AND t.production_year <= 1894;""",
             """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
-            _id AND mc.company_type_id >= 1 AND mk.keyword_id < 35239 AND t.production_year <= 1896;""", 
+            _id AND mc.company_type_id >= 1 AND mk.keyword_id < 35239 AND t.production_year <= 1896;""",
             """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
-            _id AND mc.company_type_id < 2 AND mk.keyword_id <= 35888 AND t.production_year != 2020;""", 
+            _id AND mc.company_type_id < 2 AND mk.keyword_id <= 35888 AND t.production_year != 2020;""",
             """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
-            _id AND mc.company_type_id = 2 AND mk.keyword_id > 196933 AND t.production_year = 1907;""", 
+            _id AND mc.company_type_id = 2 AND mk.keyword_id > 196933 AND t.production_year = 1907;""",
             """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
-            _id AND mc.company_type_id != 1 AND mk.keyword_id < 19712 AND t.production_year < 1980;""", 
+            _id AND mc.company_type_id != 1 AND mk.keyword_id < 19712 AND t.production_year < 1980;""",
             """SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie
             _id AND mc.company_type_id > 1 AND mk.keyword_id <= 186471 AND t.production_year < 2110;"""]
         )
     # alphabetically sorted
-    min_max_step = ([[1, 2, 1], [1, 113, 1], [1878, 2115, 1]], 
+    min_max_step = ([[1, 2, 1], [1, 113, 1], [1878, 2115, 1]],
                     [[1, 2, 1], [1, 236627, 1], [1878, 2115, 1]])
     encoders = []
 
@@ -320,7 +320,7 @@ def vectorizer_tests():
     # vectorizer.add_queries_with_cardinalities(os.path.join("assets", "queries_with_cardinalities.csv")) 
     vectorizer_vectors = vectorizer.vectorize()
     vectorizer_vectors = np.array(vectorizer_vectors[0])
-    
+
     original_vectors = original_vectors[:vectorizer_vectors.shape[0]]
 
     print(sql_queries[0][0])
@@ -333,13 +333,13 @@ def vectorizer_tests():
     #assert card_norm == normalized_cardinality, f"{card_norm} is not queal {normalized_cardinality}"
     # will store duplicated results, due to indentical second query file 
     vectorizer.save("/mnt/data/programming/tmp/", "test_output_vectorizer", "asset_queries_with_cardinalites_vectors", \
-        "csv") 
+        "csv")
 
 if __name__ == "__main__":
     vectorizer_tests()
 
 
-    
+
 
 
 

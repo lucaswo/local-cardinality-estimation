@@ -27,7 +27,7 @@ class Estimator:
     model: Model = None
 
     def __init__(self, config: Dict[str, Any] = None, config_file_path: str = "config.yaml", data: np.ndarray = None,
-                 model: Model = None, model_path: str = None, debug: bool = True):
+                 model: Model = None, model_path: str = None, debug: bool = False):
         """
         Initializer for the Estimator.
 

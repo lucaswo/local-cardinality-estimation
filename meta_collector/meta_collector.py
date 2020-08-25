@@ -30,7 +30,7 @@ class MetaCollector:
 
     debug: bool = None
 
-    def __init__(self, database_connector: DatabaseConnector, debug: bool = True):
+    def __init__(self, database_connector: DatabaseConnector, debug: bool = False):
         """
         Initializer for the MetaCollector
 

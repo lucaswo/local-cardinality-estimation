@@ -30,7 +30,8 @@ def collect_meta(file_path: str, config_file_path: str, save_file_path: str):
     print("Saving meta information to %s." % (save_file_path + ".yaml"))
 
 
-def vectorize(queries_with_cardinalities_csv_path: str, output_base_path: str, output_result_folder: str, output_base_filename : str, output_filetypes: str):
+def vectorize(queries_with_cardinalities_csv_path: str, output_base_path: str, output_result_folder: str,
+              output_base_filename: str, output_filetypes: str):
     print("Vectorizing the given queries from %s." % queries_with_cardinalities_csv_path)
     vectorizer = Vectorizer()
     vectorizer.add_queries_with_cardinalities(queries_with_cardinalities_csv_path)
@@ -40,7 +41,6 @@ def vectorize(queries_with_cardinalities_csv_path: str, output_base_path: str, o
 
 
 def estimate(data_path: str, config_file_path: str, save_model_file_path: str):
-
     files = [os.path.join(data_path, f) for f in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, f))]
     for file in files:
         loaded_data = []
@@ -106,8 +106,8 @@ if __name__ == "__main__":
                 nullqueries=args.nullqueries, save_file_path=os.path.join(wd, "fin_queries_with_cardinalities.csv"),
                 config_file_path="meta_collector/config_postgres.yaml")
     print()
-    vectorize(os.path.join(wd, "fin_queries_with_cardinalities.csv"), wd, "vectorizer_results", 
-                           "main_py_test_vectors", "csv")
+    vectorize(os.path.join(wd, "fin_queries_with_cardinalities.csv"), wd, "vectorizer_results", "main_py_test_vectors",
+              "csv")
     print()
-    estimate(os.path.join(wd, "vectorizer_results"), os.path.join("estimator", "config.yaml"), 
-                          os.path.join(wd, "model"))
+    estimate(os.path.join(wd, "vectorizer_results"), os.path.join("estimator", "config.yaml"),
+             os.path.join(wd, "model"))

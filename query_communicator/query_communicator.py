@@ -1,8 +1,4 @@
-import csv
-from typing import List
 import os.path as path
-
-import numpy as np
 
 from database_connector import DatabaseConnector
 from .database_evaluator import DatabaseEvaluator
@@ -66,7 +62,7 @@ class QueryCommunicator:
 
         evaluator = DatabaseEvaluator(input_file_path=inter_file_path, database_connector=database_connector)
         evaluator.get_cardinalities(eliminate_null_queries=True, save_file_path=save_file_path.split(".")[0],
-                                    query_number = query_number)
+                                    query_number=query_number)
 
     def produce_queries(self, database_connector: DatabaseConnector, query_number: int = 10, nullqueries: bool = False,
                         save_file_path: str = 'assets/reduced_queries_with_cardinalities.csv'):
