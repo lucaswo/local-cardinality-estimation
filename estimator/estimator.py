@@ -27,7 +27,7 @@ class Estimator:
     model: Model = None
 
     def __init__(self, config: Dict[str, Any] = None, config_file_path: str = "config.yaml", data: np.ndarray = None,
-                 model: Model = None, model_path: str = None, debug: bool = True):
+                 model: Model = None, model_path: str = None, debug: bool = False):
         """
         Initializer for the Estimator.
 
@@ -108,7 +108,13 @@ class Estimator:
         x = Dense(1, kernel_initializer=self.config["kernel_initializer"], name="main_output", activation="linear")(x)
 
         self.model = Model(inputs=one_input, outputs=x)
-        self.model.compile(loss=self.config["loss_function"], optimizer=Adam(lr=self.config["learning_rate"]))
+
+        if self.config["loss_function"] == "q_loss":
+            loss_function = self.q_loss
+        else:
+            loss_function = self.config["loss_function"]
+
+        self.model.compile(loss=loss_function, optimizer=Adam(lr=self.config["learning_rate"]))
 
         return self.model
 

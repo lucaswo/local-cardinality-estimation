@@ -1,0 +1,53 @@
+# Before trtiggering this action, be sure to run the following once locally and push the created files
+# pydoc-markdown --bootstrap mkdocs
+# pydoc-markdown --bootstrap git
+name: Generate markdown in docs folder
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      
+    - name: Set up Python 3.x
+      uses: actions/setup-python@v2
+      with:
+        # Semantic version range syntax or exact version of a Python version
+        python-version: '3.x' 
+    
+    - name: Install dependencies
+      run: |
+        python3 -m pip install pydoc-markdown
+        python3 -m pip install mkdocs
+        python3 -m pip install mkdocs-gitbook
+        
+    - name: Generate and move documentation
+      run: |
+        pydoc-markdown
+        
+        cp -avr diagrams/ build/docs/content/
+        cd build/docs/
+        echo "" & echo "mkdocs.yml:" && cat mkdocs.yml
+        mkdocs build
+        
+        cd ../..
+        rm -rf docs/*
+        touch docs/.nojekyll
+
+        mv build/docs/site/* docs/
+
+    - name: Commit files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add -A
+        git commit -m "Documentation update action"
+
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}

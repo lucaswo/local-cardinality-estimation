@@ -1,8 +1,4 @@
-import csv
-from typing import List
 import os.path as path
-
-import numpy as np
 
 from database_connector import DatabaseConnector
 from .database_evaluator import DatabaseEvaluator
@@ -38,11 +34,11 @@ class QueryCommunicator:
 
         generator = SQLGenerator(config=self.meta)
         print("generate ", query_number, " queries")
-        generator.generate_queries(qnumber=query_number, save_readable=inter_file_path)
+        generator.generate_queries(qnumber=query_number, save_readable=inter_file_path.split(".")[0])
 
-        evaluator = DatabaseEvaluator(input_file_name=inter_file_path + '.csv',
-                                      database_connector=database_connector)
-        evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path=save_file_path)
+        evaluator = DatabaseEvaluator(input_file_path=inter_file_path, database_connector=database_connector)
+        evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path=save_file_path.split(".")[0],
+                                    query_number=query_number)
 
     def get_nullfree_queries(self, query_number: int, save_file_path: str, database_connector: DatabaseConnector):
         '''
@@ -55,65 +51,18 @@ class QueryCommunicator:
         '''
 
         # generate 150% queries
-        query_number_with_buffer = int(query_number * 1.5)
+        query_number_with_buffer = int(query_number * 2.0)
 
         # intermediate file path for the csv from the generator, which will be evaluated and reduced afterwards
         inter_file_path = path.join(path.dirname(save_file_path), 'inter_' + path.basename(save_file_path))
 
         # number of distinct queries
         generator = SQLGenerator(config=self.meta)
-        generator.generate_queries(qnumber=query_number_with_buffer, save_readable=inter_file_path)
+        generator.generate_queries(qnumber=query_number_with_buffer, save_readable=inter_file_path.split(".")[0])
 
-        evaluator = DatabaseEvaluator(input_file_name=inter_file_path + '.csv', database_connector=database_connector)
-        evaluator.get_cardinalities(eliminate_null_queries=True, save_file_path=save_file_path)
-        reduced_queries = self.reduce_queries(query_number=query_number, save_file_path=save_file_path)
-
-        self.write_queries(queries=reduced_queries, save_file_path=save_file_path)
-
-        return reduced_queries
-
-    @staticmethod
-    def reduce_queries(query_number: int, save_file_path: str) -> List:
-        '''
-        Reduces genrated queries to the requested number of queries
-        :param query_number: number of queries to generate
-        :param save_file_path: path to save the finished queries with their cardinalities
-        :return: DataFrame with reduced query sets
-        '''
-
-        with open(save_file_path, 'r') as file:
-            csv_reader = csv.reader(file, delimiter=';')
-            queries = np.array([r for r in csv_reader])
-            set_ids = set(queries[1:, 0])
-            reduced_queries = [queries[0].tolist()]
-        for id in set_ids:
-            query_n = np.where(queries[:, 0] == id)
-            if query_n[0].size > query_number:
-                rq = [queries.tolist()[i] for i in query_n[0].tolist()]
-                for q in rq[:query_number]:
-                    reduced_queries.append(q)
-                print('%d queries have been generated for query set %d!' % (query_number, int(id)))
-            else:
-                rq = [queries.tolist()[i] for i in query_n[0].tolist()]
-                for q in rq:
-                    reduced_queries.append(q)
-                print('%d queries have been generated for query set %d!' % (len(query_n[0]), int(id)))
-
-        return reduced_queries
-
-    @staticmethod
-    def write_queries(queries: List, save_file_path: str = 'assets/reduced_queries_with_cardinalities.csv'):
-        '''
-        function for writing the csv file with the reduced queries
-        :param queries: list of queries to write in a csv file
-        :param save_file_path: file path, where to save the file
-        :return:
-        '''
-
-        with open(save_file_path, 'w') as file:
-            writer = csv.writer(file, delimiter=';')
-            for q in queries:
-                writer.writerow(q)
+        evaluator = DatabaseEvaluator(input_file_path=inter_file_path, database_connector=database_connector)
+        evaluator.get_cardinalities(eliminate_null_queries=True, save_file_path=save_file_path.split(".")[0],
+                                    query_number=query_number)
 
     def produce_queries(self, database_connector: DatabaseConnector, query_number: int = 10, nullqueries: bool = False,
                         save_file_path: str = 'assets/reduced_queries_with_cardinalities.csv'):

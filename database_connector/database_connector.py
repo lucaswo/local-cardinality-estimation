@@ -27,7 +27,7 @@ class DatabaseConnector:
 
     debug: bool = None
 
-    def __init__(self, database: Database, debug: bool = True):
+    def __init__(self, database: Database, debug: bool = False):
         """
         Initializer for the DatabaseConnector
 

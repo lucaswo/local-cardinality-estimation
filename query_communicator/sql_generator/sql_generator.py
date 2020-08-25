@@ -168,7 +168,7 @@ class SQLGenerator:
                                                                       val=c['val']) for c in comparison))
 
                     # Test for duplicate
-                    if sql not in queries:
+                    if (key,sql) not in queries:
                         writer.writerow({'querySetID': key, 'query': sql, 'encodings': encodings,
                                          'max_card': max_card, 'min_max_step': min_max})
                         # append query with all additional information. needed for the csv file
