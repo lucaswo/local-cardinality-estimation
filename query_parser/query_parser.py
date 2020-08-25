@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from typing import Tuple, List, Dict
 import re
@@ -6,35 +7,55 @@ import yaml
 
 
 class QueryFormat(Enum):
-    CROSS_PRODUCT = "cp"
-    JOIN_ON = "jo"
+    """
+    Enum for the different supported query-formats.
+
+    CROSS_PRODUCT: SELECT COUNT(*) FROM movie_companies mc,title t,movie_info_idx mi_idx WHERE t.id=mc.movie_id AND
+        t.id=mi_idx.movie_id AND mi_idx.info_type_id=112 AND mc.company_type_id=2;
+
+    JOIN_ON: SELECT COUNT(*) FROM movie_companies mc INNER JOIN title t ON (t.id=mc.movie_id) INNER JOIN movie_info_idx
+        mi_idx ON (t.id=mi_idx.movie_id) WHERE mi_idx.info_type_id=112 AND mc.company_type_id=2;
+    """
+
+    CROSS_PRODUCT = "cross_product"
+    JOIN_ON = "join_on"
 
 
 class QueryParser:
     """
-    Class for the query_parser. This is responsible of reading a given file and return a file containing the aggregated
-    information of this file.
+    Class for the query_parser. This is responsible of reading a given file (.csv/.tsv or .sql) which contains sql
+    queries (for more details see Readme) parse them and return a file (.yaml) containing the aggregated information of
+    the input file. This aggregated .yaml file is the requirement for the MetaCollector.
     """
 
     operators = ["<=", "!=", ">=", "=", "<", ">", "IS"]
+    """
+    The possible operators which can occur in the queries. ["<=", "!=", ">=", "=", "<", ">", "IS"]
+    """
 
     def read_file(self, file_path: str, inner_separator: str = None, outer_separator: str = None,
-                  query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) \
-            -> Tuple[Dict, str, str, str]:
+                  query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) -> Tuple[Dict, str, str, str]:
         """
-        Generic Method for reading the sql statements from a given .sql or a .csv file.
+        Generic method for rooting the processing of the input file which contains the queries according to the given
+        file type. Because .sql/.tsv files need to be processed another way than .sql files. The parameters
+        inner_separator and outer_separator allow the user to use customized .csv/.tsv files. The parameter
+        query_format allows the user to choose between the two most common join formats.
 
-        :param file_path: Path to the file containing the sql statements. This path has to end with .csv or .sql. No
-            other file types are supported at the moment.
+        :param file_path: Path to the file containing the sql statements. This path has to end with .csv/.tsv or
+            .sql. No other file types are supported at the moment. This path could be absolute as well as relative.
         :param inner_separator: The column separator used in the file. You can use '\t' for .tsv files. -> See
             documentation for details.
         :param outer_separator: The block separator used in the file. -> See documentation for details.
         :param query_format: The format of the sql query. Look at documentation of QueryFormat for details.
-        :return
+        :return A tuple containing a dictionary with the table-string as key and a list of selection attributes as
+            value, the file-type, the inner_separator and the outer_separator.
         """
 
         if not file_path:
             raise ValueError("No file_path was given!")
+
+        if not os.path.isfile(file_path):
+            raise ValueError("The given path does not point to an existing file!")
 
         file_type = file_path.split(".")[-1]
 
@@ -56,15 +77,21 @@ class QueryParser:
     def read_sql_file(file_path: str, query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) \
             -> Tuple[Dict, str, str, str]:
         """
-        Read the sql statements from given sql file.
+        Read and parse the sql statements from given sql file. The most parts of the sql syntax are processed and
+        removed. Parts like 'SELECT COUNT(*)' and 'INNER JOIN' are removed from the query.
 
-        :param file_path: Path to the file containing the sql statements.
+        :param file_path: Path to the file containing the sql statements. This path has to end with .sql. No other file
+        types are supported at the moment. This path could be absolute as well as relative.
         :param query_format: The format of the sql query. Look at documentation of QueryFormat for details.
-        :return
+        :return A tuple containing a dictionary with the table-string as key and a list of selection attributes as
+            value, the file-type, the inner_separator and the outer_separator.
         """
 
         if not file_path or file_path.split(".")[-1] != "sql":
             raise ValueError("The given file-path doesn't point to a .sql file. Please correct this!")
+
+        if not os.path.isfile(file_path):
+            raise ValueError("The given path does not point to an existing file!")
 
         if query_format != QueryFormat.CROSS_PRODUCT and query_format != QueryFormat.JOIN_ON:
             raise ValueError("Incorrect QueryFormat given!")
@@ -105,17 +132,23 @@ class QueryParser:
     def read_csv_file(file_path: str, inner_separator: str = ",", outer_separator: str = "#") \
             -> Tuple[Dict, str, str, str]:
         """
-        Read the csv formatted sql statements from given file.
+        Read the csv formatted sql statements from given file. For more details on the format, look at the readme.
 
-        :param file_path: Path to the file containing the sql statements formatted as csv.
+        :param file_path: Path to the file containing the sql statements formatted as csv or .tsv. This path has to end
+        with .csv or .tsv. No other file types are supported at the moment. This path could be absolute as well as
+        relative.
         :param inner_separator: The column separator used in the file. You can use '\t' for .tsv files. -> See
             documentation for details.
         :param outer_separator: The block separator used in the file. -> See documentation for details.
-        :return
+        :return A tuple containing a dictionary with the table-string as key and a list of selection attributes as
+            value, the file-type, the inner_separator and the outer_separator.
         """
 
         if not file_path:
             raise ValueError("No file_path was given!")
+
+        if not os.path.isfile(file_path):
+            raise ValueError("The given path does not point to an existing file!")
 
         if file_path.split(".")[-1] != "csv" and file_path.split(".")[-1] != "tsv":
             raise ValueError("The given file-path doesn't point to a .csv file. Please correct this!")
@@ -146,7 +179,8 @@ class QueryParser:
     def create_solution_dict(self, command_dict: Dict[str, List[str] or List[Tuple[str, str]]], file_type: str,
                              inner_separator: str) -> Dict[int, Dict[str, List[str or Tuple[str, str]]]]:
         """
-        Method for building the solution dict.
+        Method for building the solution dict. Therefore the given file with the queries must be parsed at first and
+        the command_dict must be created.
 
         :param command_dict: Dict with a alphabetical sorted string of the joining tables as key and a list of where
             clauses as string if the file type is sql or a list of tuples containing the join-attribute-string in first
