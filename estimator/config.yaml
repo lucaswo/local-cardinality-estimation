@@ -2,7 +2,7 @@
 layer:
   - 512
   - 256
-loss_function: mean_squared_error
+loss_function: q_loss
 dropout: 0.2
 learning_rate: 0.0001
 kernel_initializer: normal
