@@ -1,7 +1,6 @@
 # Local Cardinality Estimation
 
-KP SS2020
-
+## The complete documentation can be found [here](https://lucaswo.github.io/local-cardinality-estimation/).
 - The submodule 'meta-collector' collects the several informations from the requested table and saves the information into a .json file
 
 - The submodule 'sql-generator' uses the output of the meta-collector to create random SQL-Queries with the corresponding schema
