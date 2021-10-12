@@ -18,17 +18,36 @@ For building the Documentation you need to execute the `setup_doc.sh`. This scri
 
 ## References
 
-[1] [Woltmann et al., Cardinality estimation with local deep learning models, aiDM 2019](https://dl.acm.org/citation.cfm?id=3329875)
+[1] [Woltmann et al., Cardinality estimation with local deep learning models, aiDM@SIGMOD 2019](https://dl.acm.org/citation.cfm?id=3329875)  
+[2] [Woltmann et al., Aggregate-based Training Phase for ML-based Cardinality Estimation, BTW 2021](https://dl.gi.de/handle/20.500.12116/35812)  
+[3] [Woltmann et al., Machine Learning-based Cardinality Estimation in DBMS on Pre-Aggregated Data, arXiv 2020](https://arxiv.org/abs/2005.09367)
 
 ## Cite
 
-Please cite our paper if you use this code in your own work:
+Please cite our papers if you use this code in your own work:
 ```
 @article{woltmann2019localdeep,
   title = {Cardinality estimation with local deep learning models},
   author = {Woltmann, Lucas and Hartmann, Claudio and Thiele, Maik and Habich, Dirk and Lehner, Wolfgang},
   booktitle = {Proceedings of the Second International Workshop on Exploiting Artificial Intelligence Techniques for Data Management},
-  series = {aiDM '19},
+  series = {aiDM@SIGMOD '19},
   year = {2019}
+}
+
+@article{woltmann2021aggregate,
+  title={Aggregate-based Training Phase for ML-based Cardinality Estimation},
+  author={Woltmann, Lucas and Hartmann, Claudio and Habich, Dirk and Lehner, Wolfgang},
+  journal={BTW 2021},
+  year={2021},
+  publisher={Gesellschaft f{\"u}r Informatik, Bonn},
+  pages = {135-154},
+  doi = {10.18420/btw2021-07}
+}
+
+@article{woltmann2020cube,
+  title={Machine Learning-based Cardinality Estimation in DBMS on Pre-Aggregated Data},
+  author={Woltmann, Lucas and Hartmann, Claudio and Habich, Dirk and Lehner, Wolfgang},
+  journal={arXiv preprint arXiv:2005.09367},
+  year={2020}
 }
 ```
