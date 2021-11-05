@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<title>DatabaseConnector Class - Local Cardinality Estimation</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="generator" content="mkdocs-1.2.3, mkdocs-gitbook-1.0.7">
+
+<link rel="shortcut icon" href="../../images/favicon.ico" type="image/x-icon">
+<meta name="HandheldFriendly" content="true"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta rel="next" href="" />
+<link href="../../css/style.min.css" rel="stylesheet"> 
+</head>
+
+<body>
+<div class="book">
+<div class="book-summary">
+<div id="book-search-input" role="search">
+<input type="text" placeholder="Type to search" />
+</div> <!-- end of book-search-input -->
+
+<nav role="navigation">
+<ul class="summary">
+<li>
+<a href="../.." target="_blank" class="custom-link">Local Cardinality Estimation</a>
+</li>
+<li class="divider"></li>
+<li class="chapter" data-path="">
+<a href="../..">Home</a>
+<li class="header">DatabaseConnector</li>
+
+<li>
+<a href="./" class="active">DatabaseConnector Class</a>
+</li>
+
+<li>
+<a href="../databaseconnector-readme/" class="">DatabaseConnector Readme</a>
+</li>
+
+<li class="header">QueryParser</li>
+
+<li>
+<a href="../../queryparser/queryparser-class/" class="">QueryParser Class</a>
+</li>
+
+<li>
+<a href="../../queryparser/queryparser-readme/" class="">QueryParser Readme</a>
+</li>
+
+<li class="header">QueryCommunicator</li>
+
+<li>
+<a href="#">QueryCommunicator Class</a>
+<ul>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-class/" class="">DatabaseEvaluator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-readme/" class="">DatabaseEvaluator Readme</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-class/" class="">SQLGenerator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-readme/" class="">SQLGenerator Readme</a>
+</li>
+</ul>
+</li>
+
+<li class="header">Meta-Collector</li>
+
+<li>
+<a href="../../meta-collector/meta-collector-class/" class="">Meta-Collector Class</a>
+</li>
+
+<li>
+<a href="../../meta-collector/meta-collector-readme/" class="">Meta-Collector Readme</a>
+</li>
+
+<li class="header">Vectorizer</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-class/" class="">Vectorizer Class</a>
+</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-readme/" class="">Vectorizer Readme</a>
+</li>
+
+<li class="header">Estimator</li>
+
+<li>
+<a href="../../estimator/estimator-class/" class="">Estimator Class</a>
+</li>
+
+<li>
+<a href="../../estimator/estimator-readme/" class="">Estimator Readme</a>
+</li>
+
+<li class="divider"></li>
+
+
+
+<li><a href="http://www.mkdocs.org">
+Published with MkDocs
+</a></li>
+
+<li><a href="https://github.com/GitbookIO/theme-default">
+Theme by GitBook
+</a></li>
+</ul>
+
+</nav>
+
+</div> <!-- end of book-summary -->
+
+<div class="book-body">
+<div class="body-inner">
+<div class="book-header" role="navigation">
+
+<!-- Title -->
+<h1>
+<i class="fa fa-circle-o-notch fa-spin"></i>
+<a href="." ></a>
+</h1>
+
+</div> <!-- end of book-header -->
+
+<div class="page-wrapper" tabindex="-1" role="main">
+<div class="page-inner">
+<div id="book-search-results">
+<div class="search-noresults">
+
+<section class="normal markdown-section">
+
+
+
+<p><a id="database_connector.database_connector"></a></p>
+<h1 id="database_connectordatabase_connector">database_connector.database_connector</h1>
+<p><a id="database_connector.database_connector.Database"></a></p>
+<h2 id="database-objects">Database Objects</h2>
+<pre><code class="language-python">class Database(Enum)
+</code></pre>
+<p>Enum for the different supported databases. If you use MySQL, then use MARIADB as value here.</p>
+<p><a id="database_connector.database_connector.DatabaseConnector"></a></p>
+<h2 id="databaseconnector-objects">DatabaseConnector Objects</h2>
+<pre><code class="language-python">class DatabaseConnector()
+</code></pre>
+<p>Class for DatabaseConnector.</p>
+<p><a id="database_connector.database_connector.DatabaseConnector.__init__"></a></p>
+<h4 id="__init__">__init__</h4>
+<pre><code class="language-python">def __init__(database: Database, debug: bool = False)
+</code></pre>
+<p>Initializer for the DatabaseConnector</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>debug</code>: boolean whether to print additional information while processing</li>
+</ul>
+<p><a id="database_connector.database_connector.DatabaseConnector.connect"></a></p>
+<h4 id="connect">connect</h4>
+<pre><code class="language-python">def connect(config: Dict = None, config_file_path: str = None, sqlite_file_path: str = None)
+</code></pre>
+<p>Wrapper method for connecting to the selected database.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>host and port (default to host: localhost, port: 5432 if not given) for PostgreSQL or it has to be a
+dictionary with at least database, user and password and optionally host and port (default to host:
+localhost, port: 3306 if not given) for MariaDB.
+if not given: The config file path is needed and used for these settings.
+</code></pre>
+<ul>
+<li><code>config</code>: if given: It has to be a dictionary with at least db_name, user and password and optionally</li>
+<li><code>config_file_path</code>: Path to the config file for PostgreSQL or MariaDB.</li>
+<li><code>sqlite_file_path</code>: Path to the SQLite database file.</li>
+</ul>
+<p><a id="database_connector.database_connector.DatabaseConnector.connect_to_postgres"></a></p>
+<h4 id="connect_to_postgres">connect_to_postgres</h4>
+<pre><code class="language-python">def connect_to_postgres(config: Dict = None, config_file_path: str = &quot;config.yaml&quot;)
+</code></pre>
+<p>Connect to the postgres database with the given config.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>and port (default to host: localhost, port: 5432 if not given)
+if not given: the config file 'config.yaml' is used for these settings
+.yaml/.yml file
+</code></pre>
+<ul>
+<li><code>config</code>: if given: it has to be a dictionary with at least db_name, user and password and optionally host</li>
+<li><code>config_file_path</code>: path for the config-file -&gt; only necessary if no config is given; needs to point on a</li>
+</ul>
+<p><a id="database_connector.database_connector.DatabaseConnector.connect_to_mariadb"></a></p>
+<h4 id="connect_to_mariadb">connect_to_mariadb</h4>
+<pre><code class="language-python">def connect_to_mariadb(config: Dict = None, config_file_path: str = &quot;config.yaml&quot;)
+</code></pre>
+<p>Connect to the postgres database with the given config.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>and port (default to host: localhost, port: 3306 if not given)
+if not given: the config file 'config.yaml' is used for these settings
+.yaml/.yml file
+</code></pre>
+<ul>
+<li><code>config</code>: if given: it has to be a dictionary with at least db_name, user and password and optionally host</li>
+<li><code>config_file_path</code>: path for the config-file -&gt; only necessary if no config is given; needs to point on a</li>
+</ul>
+<p><a id="database_connector.database_connector.DatabaseConnector.connect_to_sqlite"></a></p>
+<h4 id="connect_to_sqlite">connect_to_sqlite</h4>
+<pre><code class="language-python">def connect_to_sqlite(database_file_path: str)
+</code></pre>
+<p>Open connection to a sqlite database.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>database_file_path</code>: The path to the sqlite database file.</li>
+</ul>
+<p><a id="database_connector.database_connector.DatabaseConnector.close_database_connection"></a></p>
+<h4 id="close_database_connection">close_database_connection</h4>
+<pre><code class="language-python">def close_database_connection()
+</code></pre>
+<p>close  the connection to the database</p>
+<p><strong>Returns</strong>:</p>
+<p>void</p>
+<p><a id="database_connector.database_connector.DatabaseConnector.execute"></a></p>
+<h4 id="execute">execute</h4>
+<pre><code class="language-python">def execute(sql_string: str)
+</code></pre>
+<p>Method for executing a SQL-Query.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>sql_string</code>: The SQL-Query to execute</li>
+</ul>
+<p><a id="database_connector.database_connector.DatabaseConnector.fetchall"></a></p>
+<h4 id="fetchall">fetchall</h4>
+<pre><code class="language-python">def fetchall()
+</code></pre>
+<p>Wrapper for fetchall method.</p>
+<p><a id="database_connector.database_connector.DatabaseConnector.fetchone"></a></p>
+<h4 id="fetchone">fetchone</h4>
+<pre><code class="language-python">def fetchone()
+</code></pre>
+<p>Wrapper for fetchone method.</p>
+
+
+</section>
+</div> <!-- end of search-noresults -->
+<div class="search-results">
+<div class="has-results">
+
+<h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+<ul class="search-results-list"></ul>
+
+</div> <!-- end of has-results -->
+<div class="no-results">
+
+<h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+
+</div> <!-- end of no-results -->
+</div> <!-- end of search-results -->
+</div> <!-- end of book-search-results -->
+
+</div> <!-- end of page-inner -->
+</div> <!-- end of page-wrapper -->
+
+</div> <!-- end of body-inner -->
+
+</div> <!-- end of book-body -->
+<script src="../../js/main.js"></script>
+<script src="../../search/main.js"></script>
+<script src="../../js/gitbook.min.js"></script>
+<script src="../../js/theme.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<title>DatabaseEvaluator Readme - Local Cardinality Estimation</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="generator" content="mkdocs-1.2.3, mkdocs-gitbook-1.0.7">
+
+<link rel="shortcut icon" href="../../../images/favicon.ico" type="image/x-icon">
+<meta name="HandheldFriendly" content="true"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta rel="next" href="" />
+<link href="../../../css/style.min.css" rel="stylesheet"> 
+</head>
+
+<body>
+<div class="book">
+<div class="book-summary">
+<div id="book-search-input" role="search">
+<input type="text" placeholder="Type to search" />
+</div> <!-- end of book-search-input -->
+
+<nav role="navigation">
+<ul class="summary">
+<li>
+<a href="../../.." target="_blank" class="custom-link">Local Cardinality Estimation</a>
+</li>
+<li class="divider"></li>
+<li class="chapter" data-path="">
+<a href="../../..">Home</a>
+<li class="header">DatabaseConnector</li>
+
+<li>
+<a href="../../../databaseconnector/databaseconnector-class/" class="">DatabaseConnector Class</a>
+</li>
+
+<li>
+<a href="../../../databaseconnector/databaseconnector-readme/" class="">DatabaseConnector Readme</a>
+</li>
+
+<li class="header">QueryParser</li>
+
+<li>
+<a href="../../../queryparser/queryparser-class/" class="">QueryParser Class</a>
+</li>
+
+<li>
+<a href="../../../queryparser/queryparser-readme/" class="">QueryParser Readme</a>
+</li>
+
+<li class="header">QueryCommunicator</li>
+
+<li>
+<a href="#">QueryCommunicator Class</a>
+<ul>
+
+<li>
+<a href="../databaseevaluator-class/" class="">DatabaseEvaluator Class</a>
+</li>
+
+<li>
+<a href="./" class="active">DatabaseEvaluator Readme</a>
+</li>
+
+<li>
+<a href="../sqlgenerator-class/" class="">SQLGenerator Class</a>
+</li>
+
+<li>
+<a href="../sqlgenerator-readme/" class="">SQLGenerator Readme</a>
+</li>
+</ul>
+</li>
+
+<li class="header">Meta-Collector</li>
+
+<li>
+<a href="../../../meta-collector/meta-collector-class/" class="">Meta-Collector Class</a>
+</li>
+
+<li>
+<a href="../../../meta-collector/meta-collector-readme/" class="">Meta-Collector Readme</a>
+</li>
+
+<li class="header">Vectorizer</li>
+
+<li>
+<a href="../../../vectorizer/vectorizer-class/" class="">Vectorizer Class</a>
+</li>
+
+<li>
+<a href="../../../vectorizer/vectorizer-readme/" class="">Vectorizer Readme</a>
+</li>
+
+<li class="header">Estimator</li>
+
+<li>
+<a href="../../../estimator/estimator-class/" class="">Estimator Class</a>
+</li>
+
+<li>
+<a href="../../../estimator/estimator-readme/" class="">Estimator Readme</a>
+</li>
+
+<li class="divider"></li>
+
+
+
+<li><a href="http://www.mkdocs.org">
+Published with MkDocs
+</a></li>
+
+<li><a href="https://github.com/GitbookIO/theme-default">
+Theme by GitBook
+</a></li>
+</ul>
+
+</nav>
+
+</div> <!-- end of book-summary -->
+
+<div class="book-body">
+<div class="body-inner">
+<div class="book-header" role="navigation">
+
+<!-- Title -->
+<h1>
+<i class="fa fa-circle-o-notch fa-spin"></i>
+<a href="." ></a>
+</h1>
+
+</div> <!-- end of book-header -->
+
+<div class="page-wrapper" tabindex="-1" role="main">
+<div class="page-inner">
+<div id="book-search-results">
+<div class="search-noresults">
+
+<section class="normal markdown-section">
+
+
+
+<h1 id="database-evaluator">Database Evaluator</h1>
+<p>This sub(sub)module is part of the <a href="https://gitlab.hrz.tu-chemnitz.de/ddsg/ml4sys/local-cardinality-estimation/-/tree/master/query_communicator">query communicator</a> and uses the output from the <a href="https://gitlab.hrz.tu-chemnitz.de/ddsg/ml4sys/local-cardinality-estimation/-/tree/master/query_communicator/sql_generator">sql-generator</a> submodule to evaluate the generated queries against a database (currently only PostgreSQL is supported) und get the corresponding estimated and true cardinality of each query. Queries and cardinalities are input to the <a href="https://gitlab.hrz.tu-chemnitz.de/ddsg/ml4sys/local-cardinality-estimation/-/tree/master/vectorizer">vectorizer</a> submodule.</p>
+<h2 id="usage">Usage</h2>
+<p>Usually this submodule is called from the <a href="https://gitlab.hrz.tu-chemnitz.de/ddsg/ml4sys/local-cardinality-estimation/-/tree/master/query_communicator">query communicator</a> and does not communicate directly with the main.py, however you may want to use it seperatly:</p>
+<ol>
+<li>First, you need a CSV file (semicolon separated) with the queries and meta data.</li>
+</ol>
+<pre><code>querySetID;query;encodings;max_card;min_max_step
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id&lt;2 AND mi_idx.info_type_id&gt;=30 AND t.production_year&gt;=2050;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id&lt;1 AND mi_idx.info_type_id=71 AND t.production_year&lt;=2109;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id&lt;2 AND mi_idx.info_type_id=107 AND t.production_year&gt;2009;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id=1 AND mi_idx.info_type_id&lt;80 AND t.production_year&lt;=1894;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id&lt;=1 AND mi_idx.info_type_id!=62 AND t.production_year&lt;=2094;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id&gt;=2 AND mi_idx.info_type_id&gt;45 AND t.production_year&lt;1939;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id=2 AND mi_idx.info_type_id&lt;=32 AND t.production_year&lt;=1918;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id&gt;=2 AND mi_idx.info_type_id&lt;54 AND t.production_year&lt;=2097;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id&lt;=2 AND mi_idx.info_type_id&gt;=38 AND t.production_year&lt;1896;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+0;SELECT COUNT(*) FROM movie_companies mc,movie_info_idx mi_idx,title t WHERE t.id=mi_idx.movie_id AND t.id=mc.movie_id AND mc.company_type_id=2 AND mi_idx.info_type_id&lt;=66 AND t.production_year=2026;{};134163798;{'company_type_id': [1, 2, 1], 'info_type_id': [1, 113, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id=1 AND mk.keyword_id&gt;=117023 AND t.production_year&lt;=1894;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id&lt;1 AND mk.keyword_id&gt;=134591 AND t.production_year&lt;2015;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id&gt;=1 AND mk.keyword_id&lt;35239 AND t.production_year&lt;=1896;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id&lt;2 AND mk.keyword_id&lt;=35888 AND t.production_year!=2020;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id&lt;=1 AND mk.keyword_id=20641 AND t.production_year=1889;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id&gt;2 AND mk.keyword_id!=104628 AND t.production_year&gt;=1940;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id=1 AND mk.keyword_id!=176282 AND t.production_year=2055;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id=2 AND mk.keyword_id&gt;196933 AND t.production_year=1907;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id!=1 AND mk.keyword_id&lt;19712 AND t.production_year&lt;1980;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+1;SELECT COUNT(*) FROM movie_companies mc,movie_keyword mk,title t WHERE t.id=mc.movie_id AND t.id=mk.movie_id AND mc.company_type_id&gt;1 AND mk.keyword_id&lt;=186471 AND t.production_year&lt;2110;{};63056995;{'company_type_id': [1, 2, 1], 'keyword_id': [1, 236627, 1], 'production_year': [1878, 2115, 1]}
+</code></pre>
+<p>Alternativly also a SQL-file with just the queries would work as input, but be aware that you have to add the meta data later then for further processing.  </p>
+<ol>
+<li>Initialize the Database Evaluator and call the get_cardinalities() function. </li>
+</ol>
+<p><code>python
+evaluator = DatabaseEvaluator(input_file_path=inter_file_path, database_connector=database_connector)
+evaluator.get_cardinalities(eliminate_null_queries=False, save_file_path=save_file_path.split(".")[0],
+                            query_number=query_number)</code></p>
+<p>Note, that <em>inter_file_path</em> holding just the same string as <em>save_file_path</em> with a additional "inter_"-praefix (file used in the SQL-Generator module).  Per default all intermediate products are saved in the asset folder. Be also beware of the hints in the parent module (QueryCommunicator) <a href="https://gitlab.hrz.tu-chemnitz.de/ddsg/ml4sys/local-cardinality-estimation/-/blob/master/query_communicator/README.md">documentation</a>.</p>
+
+
+</section>
+</div> <!-- end of search-noresults -->
+<div class="search-results">
+<div class="has-results">
+
+<h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+<ul class="search-results-list"></ul>
+
+</div> <!-- end of has-results -->
+<div class="no-results">
+
+<h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+
+</div> <!-- end of no-results -->
+</div> <!-- end of search-results -->
+</div> <!-- end of book-search-results -->
+
+</div> <!-- end of page-inner -->
+</div> <!-- end of page-wrapper -->
+
+</div> <!-- end of body-inner -->
+
+</div> <!-- end of book-body -->
+<script src="../../../js/main.js"></script>
+<script src="../../../search/main.js"></script>
+<script src="../../../js/gitbook.min.js"></script>
+<script src="../../../js/theme.min.js"></script>
+</body>
+</html>

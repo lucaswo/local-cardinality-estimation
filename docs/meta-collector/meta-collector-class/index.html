@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<title>Meta-Collector Class - Local Cardinality Estimation</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="generator" content="mkdocs-1.2.3, mkdocs-gitbook-1.0.7">
+
+<link rel="shortcut icon" href="../../images/favicon.ico" type="image/x-icon">
+<meta name="HandheldFriendly" content="true"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta rel="next" href="" />
+<link href="../../css/style.min.css" rel="stylesheet"> 
+</head>
+
+<body>
+<div class="book">
+<div class="book-summary">
+<div id="book-search-input" role="search">
+<input type="text" placeholder="Type to search" />
+</div> <!-- end of book-search-input -->
+
+<nav role="navigation">
+<ul class="summary">
+<li>
+<a href="../.." target="_blank" class="custom-link">Local Cardinality Estimation</a>
+</li>
+<li class="divider"></li>
+<li class="chapter" data-path="">
+<a href="../..">Home</a>
+<li class="header">DatabaseConnector</li>
+
+<li>
+<a href="../../databaseconnector/databaseconnector-class/" class="">DatabaseConnector Class</a>
+</li>
+
+<li>
+<a href="../../databaseconnector/databaseconnector-readme/" class="">DatabaseConnector Readme</a>
+</li>
+
+<li class="header">QueryParser</li>
+
+<li>
+<a href="../../queryparser/queryparser-class/" class="">QueryParser Class</a>
+</li>
+
+<li>
+<a href="../../queryparser/queryparser-readme/" class="">QueryParser Readme</a>
+</li>
+
+<li class="header">QueryCommunicator</li>
+
+<li>
+<a href="#">QueryCommunicator Class</a>
+<ul>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-class/" class="">DatabaseEvaluator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-readme/" class="">DatabaseEvaluator Readme</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-class/" class="">SQLGenerator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-readme/" class="">SQLGenerator Readme</a>
+</li>
+</ul>
+</li>
+
+<li class="header">Meta-Collector</li>
+
+<li>
+<a href="./" class="active">Meta-Collector Class</a>
+</li>
+
+<li>
+<a href="../meta-collector-readme/" class="">Meta-Collector Readme</a>
+</li>
+
+<li class="header">Vectorizer</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-class/" class="">Vectorizer Class</a>
+</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-readme/" class="">Vectorizer Readme</a>
+</li>
+
+<li class="header">Estimator</li>
+
+<li>
+<a href="../../estimator/estimator-class/" class="">Estimator Class</a>
+</li>
+
+<li>
+<a href="../../estimator/estimator-readme/" class="">Estimator Readme</a>
+</li>
+
+<li class="divider"></li>
+
+
+
+<li><a href="http://www.mkdocs.org">
+Published with MkDocs
+</a></li>
+
+<li><a href="https://github.com/GitbookIO/theme-default">
+Theme by GitBook
+</a></li>
+</ul>
+
+</nav>
+
+</div> <!-- end of book-summary -->
+
+<div class="book-body">
+<div class="body-inner">
+<div class="book-header" role="navigation">
+
+<!-- Title -->
+<h1>
+<i class="fa fa-circle-o-notch fa-spin"></i>
+<a href="." ></a>
+</h1>
+
+</div> <!-- end of book-header -->
+
+<div class="page-wrapper" tabindex="-1" role="main">
+<div class="page-inner">
+<div id="book-search-results">
+<div class="search-noresults">
+
+<section class="normal markdown-section">
+
+
+
+<p><a id="meta_collector.meta_collector"></a></p>
+<h1 id="meta_collectormeta_collector">meta_collector.meta_collector</h1>
+<p><a id="meta_collector.meta_collector.CreationMode"></a></p>
+<h2 id="creationmode-objects">CreationMode Objects</h2>
+<pre><code class="language-python">class CreationMode(Enum)
+</code></pre>
+<p>Enum for the different possibilities to use the MetaCollector.</p>
+<p>0 -&gt; don't create table, 1 -&gt; create temporary table, 2 -&gt; create permanent table</p>
+<p><a id="meta_collector.meta_collector.MetaCollector"></a></p>
+<h2 id="metacollector-objects">MetaCollector Objects</h2>
+<pre><code class="language-python">class MetaCollector()
+</code></pre>
+<p>Class for MetaCollector.</p>
+<p><a id="meta_collector.meta_collector.MetaCollector.__init__"></a></p>
+<h4 id="__init__">__init__</h4>
+<pre><code class="language-python">def __init__(database_connector: DatabaseConnector, debug: bool = False)
+</code></pre>
+<p>Initializer for the MetaCollector</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>database_connector</code>: The connector to the used database.</li>
+<li><code>debug</code>: boolean whether to print additional information while processing</li>
+</ul>
+<p><a id="meta_collector.meta_collector.MetaCollector.get_columns_data_postgres"></a></p>
+<h4 id="get_columns_data_postgres">get_columns_data_postgres</h4>
+<pre><code class="language-python">def get_columns_data_postgres(table_names: List[str or Tuple[str, str]], columns: List[str]) -&gt; List[Tuple[str, str, str, Tuple[int, int, int], Dict[str, LabelEncoder], str]]
+</code></pre>
+<p>Get column-name and datatype for the requested columns of the corresponding tables for PostgreSQL and MariaDB.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>second place, to join.
+</code></pre>
+<ul>
+<li><code>table_names</code>: List of names of tables, as strings or tuples containing table-name in first and alias in</li>
+<li><code>columns</code>: Columns to project on.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>A list containing the name of the column, the table alias (if existent, else the table-name), the</p>
+<p><a id="meta_collector.meta_collector.MetaCollector.get_columns_data_sqlite"></a></p>
+<h4 id="get_columns_data_sqlite">get_columns_data_sqlite</h4>
+<pre><code class="language-python">def get_columns_data_sqlite(table_names: List[str or Tuple[str, str]], columns: List[str]) -&gt; List[Tuple[str, str, str, Tuple[int, int, int], Dict[str, LabelEncoder], str]]
+</code></pre>
+<p>Get column-name and datatype for the requested columns of the corresponding tables for SQLite.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>second place, to join.
+</code></pre>
+<ul>
+<li><code>table_names</code>: List of names of tables, as strings or tuples containing table-name in first and alias in</li>
+<li><code>columns</code>: Columns to project on.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>A list containing the name of the column, the table alias (if existent, else the table-name), the</p>
+<p><a id="meta_collector.meta_collector.MetaCollector.collect_min_max_step"></a></p>
+<h4 id="collect_min_max_step">collect_min_max_step</h4>
+<pre><code class="language-python">def collect_min_max_step(tablename: str, column: Tuple[str, str]) -&gt; (Tuple[int, int, int], Dict)
+</code></pre>
+<p>After collecting the datatype information for the columns this function returns the min and max values for the
+meta-table and the encoders.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>tablename</code>: String containing the name of the table where to find the column</li>
+<li><code>column</code>: a tuple containing the name and the datatype for the column, each as string</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>first: dictionary with the attribute-name as key and a tuple containing min-value, max-value and</p>
+<p><a id="meta_collector.meta_collector.MetaCollector.get_max_card"></a></p>
+<h4 id="get_max_card">get_max_card</h4>
+<pre><code class="language-python">def get_max_card(table_names: List[str or Tuple[str, str]], join_atts: List[str or Tuple[str, str]] = None) -&gt; int
+</code></pre>
+<p>Get the size of the join-table without any selections, the so called max-card.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>second place, to join.
+join the tables on. -&gt; is optional, because there is no join if there is only one table and so there would
+be no join-attribute needed in that case
+</code></pre>
+<ul>
+<li><code>table_names</code>: List of names of tables, as strings or tuples containing table-name in first and alias in</li>
+<li><code>join_atts</code>: List of attributes, as strings or tuples containing the two attributes to join with '=', to</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p><a id="meta_collector.meta_collector.MetaCollector.setup_view"></a></p>
+<h4 id="setup_view">setup_view</h4>
+<pre><code class="language-python">def setup_view(table_names: List[str or Tuple[str, str]], columns_types: List[Tuple], join_atts: List[str or Tuple[str, str]] = None, cube: bool = False, mode: CreationMode = CreationMode.NONE) -&gt; (List[Tuple[str, str]], int)
+</code></pre>
+<p>Create the tables tmpview and if cube==True also tmpview_cube containing the metadata for the given tables
+joined on the attributes and projected on the columns.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>second place, to join.
+join the tables on. -&gt; is optional, because there is no join if there is only one table and so there would
+be no join-attribute needed in that case
+</code></pre>
+<ul>
+<li><code>table_names</code>: List of names of tables, as strings or tuples containing table-name in first and alias in</li>
+<li><code>columns_types</code>: columns to project on</li>
+<li><code>join_atts</code>: List of attributes, as strings or tuples containing the two attributes to join with '=', to</li>
+<li><code>cube</code>: boolean whether to create the *_cube table, too</li>
+<li><code>mode</code>: see CreationMode-Enum</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>first: a list of tuples containing the name and the datatype for the columns, each as string</p>
+<p><a id="meta_collector.meta_collector.MetaCollector.setup_cube_view"></a></p>
+<h4 id="setup_cube_view">setup_cube_view</h4>
+<pre><code class="language-python">def setup_cube_view(new_table_name: str, columns)
+</code></pre>
+<p>Create the table tmpview_cube if cube==True containing the metadata for the given tables joined on the
+attributes and projected on the columns.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>new_table_name</code>: The name of the before created table.</li>
+<li><code>columns</code>: Columns to project on.</li>
+</ul>
+<p><a id="meta_collector.meta_collector.MetaCollector.get_meta"></a></p>
+<h4 id="get_meta">get_meta</h4>
+<pre><code class="language-python">def get_meta(table_names: List[str or Tuple[str, str]], columns: List[str], join_atts: List[str or Tuple[str, str]] = None, mode: CreationMode = CreationMode.NONE, save: bool = True, save_file_name: str = None, batchmode: bool = False, cube: bool = False) -&gt; Dict
+</code></pre>
+<p>Method for the whole process of collecting the meta-information for the given tables joined on the given
+attributes and projected on the given columns.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>second place, to join.
+join the tables on. -&gt; is optional, because there is no join if there is only one table and so there would
+be no join-attribute needed in that case
+mode
+</code></pre>
+<ul>
+<li><code>table_names</code>: List of names of tables, as strings or tuples containing table-name in first and alias in</li>
+<li><code>columns</code>: List of names of columns, as strings, to project on.</li>
+<li><code>join_atts</code>: List of attributes, as strings or tuples containing the two attributes to join with '=', to</li>
+<li><code>save</code>: boolean whether to save the meta-information to file</li>
+<li><code>save_file_name</code>: name for the save-file for the meta_information -&gt; not needed if save==False</li>
+<li><code>batchmode</code>: whether the meta data is collected in batches or not -&gt; connection to db held open if batch</li>
+<li><code>mode</code>: see CreationMode-Enum</li>
+<li><code>cube</code>: Whether to create the _cube table additionally (only for CreationMode Temporary or Permanent).</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>dictionary containing the meta-information</p>
+<p><a id="meta_collector.meta_collector.MetaCollector.get_meta_from_file"></a></p>
+<h4 id="get_meta_from_file">get_meta_from_file</h4>
+<pre><code class="language-python">def get_meta_from_file(file_path: str, save: bool = True, save_file_path: str = None, mode: CreationMode = CreationMode.NONE, override: bool = True) -&gt; Dict[int, any]
+</code></pre>
+<p>Method for collecting meta data for the information given in a file from QueryParser or at least a file formatted
+like this.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>file_path</code>: Path to the file. Format has to be the same like the output of QueryParser</li>
+<li><code>save</code>: Whether to save the information to file or not. -&gt; It is recommended to do so.</li>
+<li><code>save_file_path</code>: Optional path for the save-file.</li>
+<li><code>mode</code>: see CreationMode-Enum</li>
+<li><code>override</code>: Whether to override an already existing meta_information file.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>The solution dict.</p>
+<p><a id="meta_collector.meta_collector.MetaCollector.save_meta"></a></p>
+<h4 id="save_meta">save_meta</h4>
+<pre><code class="language-python">def save_meta(meta_dict: Dict, file_name: str = &quot;meta_information&quot;, mode: str = &quot;w&quot;)
+</code></pre>
+<p>Method for saving the meta-information to file.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>meta_dict</code>: the dictionary containing the meta-information to save</li>
+<li><code>file_name</code>: the name (without file-type) for the save-file</li>
+<li><code>mode</code>: The mode to open the file. Some common possibilities are 'w', 'w+', 'r', 'a', 'a+'</li>
+</ul>
+
+
+</section>
+</div> <!-- end of search-noresults -->
+<div class="search-results">
+<div class="has-results">
+
+<h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+<ul class="search-results-list"></ul>
+
+</div> <!-- end of has-results -->
+<div class="no-results">
+
+<h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+
+</div> <!-- end of no-results -->
+</div> <!-- end of search-results -->
+</div> <!-- end of book-search-results -->
+
+</div> <!-- end of page-inner -->
+</div> <!-- end of page-wrapper -->
+
+</div> <!-- end of body-inner -->
+
+</div> <!-- end of book-body -->
+<script src="../../js/main.js"></script>
+<script src="../../search/main.js"></script>
+<script src="../../js/gitbook.min.js"></script>
+<script src="../../js/theme.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<title>DatabaseConnector Readme - Local Cardinality Estimation</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="generator" content="mkdocs-1.2.3, mkdocs-gitbook-1.0.7">
+
+<link rel="shortcut icon" href="../../images/favicon.ico" type="image/x-icon">
+<meta name="HandheldFriendly" content="true"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta rel="next" href="" />
+<link href="../../css/style.min.css" rel="stylesheet"> 
+</head>
+
+<body>
+<div class="book">
+<div class="book-summary">
+<div id="book-search-input" role="search">
+<input type="text" placeholder="Type to search" />
+</div> <!-- end of book-search-input -->
+
+<nav role="navigation">
+<ul class="summary">
+<li>
+<a href="../.." target="_blank" class="custom-link">Local Cardinality Estimation</a>
+</li>
+<li class="divider"></li>
+<li class="chapter" data-path="">
+<a href="../..">Home</a>
+<li class="header">DatabaseConnector</li>
+
+<li>
+<a href="../databaseconnector-class/" class="">DatabaseConnector Class</a>
+</li>
+
+<li>
+<a href="./" class="active">DatabaseConnector Readme</a>
+</li>
+
+<li class="header">QueryParser</li>
+
+<li>
+<a href="../../queryparser/queryparser-class/" class="">QueryParser Class</a>
+</li>
+
+<li>
+<a href="../../queryparser/queryparser-readme/" class="">QueryParser Readme</a>
+</li>
+
+<li class="header">QueryCommunicator</li>
+
+<li>
+<a href="#">QueryCommunicator Class</a>
+<ul>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-class/" class="">DatabaseEvaluator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-readme/" class="">DatabaseEvaluator Readme</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-class/" class="">SQLGenerator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-readme/" class="">SQLGenerator Readme</a>
+</li>
+</ul>
+</li>
+
+<li class="header">Meta-Collector</li>
+
+<li>
+<a href="../../meta-collector/meta-collector-class/" class="">Meta-Collector Class</a>
+</li>
+
+<li>
+<a href="../../meta-collector/meta-collector-readme/" class="">Meta-Collector Readme</a>
+</li>
+
+<li class="header">Vectorizer</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-class/" class="">Vectorizer Class</a>
+</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-readme/" class="">Vectorizer Readme</a>
+</li>
+
+<li class="header">Estimator</li>
+
+<li>
+<a href="../../estimator/estimator-class/" class="">Estimator Class</a>
+</li>
+
+<li>
+<a href="../../estimator/estimator-readme/" class="">Estimator Readme</a>
+</li>
+
+<li class="divider"></li>
+
+
+
+<li><a href="http://www.mkdocs.org">
+Published with MkDocs
+</a></li>
+
+<li><a href="https://github.com/GitbookIO/theme-default">
+Theme by GitBook
+</a></li>
+</ul>
+
+</nav>
+
+</div> <!-- end of book-summary -->
+
+<div class="book-body">
+<div class="body-inner">
+<div class="book-header" role="navigation">
+
+<!-- Title -->
+<h1>
+<i class="fa fa-circle-o-notch fa-spin"></i>
+<a href="." ></a>
+</h1>
+
+</div> <!-- end of book-header -->
+
+<div class="page-wrapper" tabindex="-1" role="main">
+<div class="page-inner">
+<div id="book-search-results">
+<div class="search-noresults">
+
+<section class="normal markdown-section">
+
+
+
+<h1 id="databaseconnector">DatabaseConnector</h1>
+<p>This module contains the functions for connecting to the database and sending requests. As DBMS supported are PostgreSQL, MariaDB (MySQL) and SQLite. It is used in the MetaCollector and the DatabaseEvaluator.</p>
+<h2 id="usage">Usage</h2>
+<p>If you want to instantiate this class, you need to have a configuration file (.yaml) or a configuration dict. This file/dict should look like:</p>
+<pre><code># PostgreSQL
+db_name: imdb
+user: postgres
+password: postgres
+host: localhost
+port: 5432
+</code></pre>
+<p>for PostgreSQL or like:</p>
+<pre><code># MariaDB
+database: imdb
+user: root
+password: maria
+host: localhost
+port: 3306
+</code></pre>
+<p>for MariaDB, respectively with your configuration for the DBMS.</p>
+<p>If you want to use SQLite, than you only have to give the path to the db file.</p>
+<h3 id="examples">Examples</h3>
+<p>PostgreSQL:</p>
+<pre><code>db_conn = DatabaseConnector(database=Database.POSTGRES)
+db_conn.connect(config_file_path=&quot;meta_collector/config_postgres.yaml&quot;)
+</code></pre>
+<p>MariaDB:</p>
+<pre><code>db_conn = DatabaseConnector(database=Database.MARIADB)
+db_conn.connect(config_file_path=&quot;meta_collector/config_mariadb.yaml&quot;)
+</code></pre>
+<p>SQLite:</p>
+<pre><code>db_conn = DatabaseConnector(database=Database.SQLITE)
+db_conn.connect(sqlite_file_path=&quot;E:/imdb.db&quot;)
+</code></pre>
+
+
+</section>
+</div> <!-- end of search-noresults -->
+<div class="search-results">
+<div class="has-results">
+
+<h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+<ul class="search-results-list"></ul>
+
+</div> <!-- end of has-results -->
+<div class="no-results">
+
+<h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+
+</div> <!-- end of no-results -->
+</div> <!-- end of search-results -->
+</div> <!-- end of book-search-results -->
+
+</div> <!-- end of page-inner -->
+</div> <!-- end of page-wrapper -->
+
+</div> <!-- end of body-inner -->
+
+</div> <!-- end of book-body -->
+<script src="../../js/main.js"></script>
+<script src="../../search/main.js"></script>
+<script src="../../js/gitbook.min.js"></script>
+<script src="../../js/theme.min.js"></script>
+</body>
+</html>

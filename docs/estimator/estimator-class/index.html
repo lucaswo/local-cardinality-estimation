@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<title>Estimator Class - Local Cardinality Estimation</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="generator" content="mkdocs-1.2.3, mkdocs-gitbook-1.0.7">
+
+<link rel="shortcut icon" href="../../images/favicon.ico" type="image/x-icon">
+<meta name="HandheldFriendly" content="true"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta rel="next" href="" />
+<link href="../../css/style.min.css" rel="stylesheet"> 
+</head>
+
+<body>
+<div class="book">
+<div class="book-summary">
+<div id="book-search-input" role="search">
+<input type="text" placeholder="Type to search" />
+</div> <!-- end of book-search-input -->
+
+<nav role="navigation">
+<ul class="summary">
+<li>
+<a href="../.." target="_blank" class="custom-link">Local Cardinality Estimation</a>
+</li>
+<li class="divider"></li>
+<li class="chapter" data-path="">
+<a href="../..">Home</a>
+<li class="header">DatabaseConnector</li>
+
+<li>
+<a href="../../databaseconnector/databaseconnector-class/" class="">DatabaseConnector Class</a>
+</li>
+
+<li>
+<a href="../../databaseconnector/databaseconnector-readme/" class="">DatabaseConnector Readme</a>
+</li>
+
+<li class="header">QueryParser</li>
+
+<li>
+<a href="../../queryparser/queryparser-class/" class="">QueryParser Class</a>
+</li>
+
+<li>
+<a href="../../queryparser/queryparser-readme/" class="">QueryParser Readme</a>
+</li>
+
+<li class="header">QueryCommunicator</li>
+
+<li>
+<a href="#">QueryCommunicator Class</a>
+<ul>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-class/" class="">DatabaseEvaluator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-readme/" class="">DatabaseEvaluator Readme</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-class/" class="">SQLGenerator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-readme/" class="">SQLGenerator Readme</a>
+</li>
+</ul>
+</li>
+
+<li class="header">Meta-Collector</li>
+
+<li>
+<a href="../../meta-collector/meta-collector-class/" class="">Meta-Collector Class</a>
+</li>
+
+<li>
+<a href="../../meta-collector/meta-collector-readme/" class="">Meta-Collector Readme</a>
+</li>
+
+<li class="header">Vectorizer</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-class/" class="">Vectorizer Class</a>
+</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-readme/" class="">Vectorizer Readme</a>
+</li>
+
+<li class="header">Estimator</li>
+
+<li>
+<a href="./" class="active">Estimator Class</a>
+</li>
+
+<li>
+<a href="../estimator-readme/" class="">Estimator Readme</a>
+</li>
+
+<li class="divider"></li>
+
+
+
+<li><a href="http://www.mkdocs.org">
+Published with MkDocs
+</a></li>
+
+<li><a href="https://github.com/GitbookIO/theme-default">
+Theme by GitBook
+</a></li>
+</ul>
+
+</nav>
+
+</div> <!-- end of book-summary -->
+
+<div class="book-body">
+<div class="body-inner">
+<div class="book-header" role="navigation">
+
+<!-- Title -->
+<h1>
+<i class="fa fa-circle-o-notch fa-spin"></i>
+<a href="." ></a>
+</h1>
+
+</div> <!-- end of book-header -->
+
+<div class="page-wrapper" tabindex="-1" role="main">
+<div class="page-inner">
+<div id="book-search-results">
+<div class="search-noresults">
+
+<section class="normal markdown-section">
+
+
+
+<p><a id="estimator.estimator"></a></p>
+<h1 id="estimatorestimator">estimator.estimator</h1>
+<p><a id="estimator.estimator.Estimator"></a></p>
+<h2 id="estimator-objects">Estimator Objects</h2>
+<pre><code class="language-python">class Estimator()
+</code></pre>
+<p>Class containing the neural network for cardinality estimation. The specifications of the neural network can be
+changed in 'config.yaml'.</p>
+<p><a id="estimator.estimator.Estimator.__init__"></a></p>
+<h4 id="__init__">__init__</h4>
+<pre><code class="language-python">def __init__(config: Dict[str, Any] = None, config_file_path: str = &quot;config.yaml&quot;, data: np.ndarray = None, model: Model = None, model_path: str = None, debug: bool = False)
+</code></pre>
+<p>Initializer for the Estimator.</p>
+<p>Configuration options for the neural network are optionally passed via a config dict.
+It must contain at least the fields "loss_function", "dropout", "learning_rate", "kernel_initializer",
+"activation_strategy" and "layer".</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>if given: It must contain at least the fields "loss_function", "dropout", "learning_rate",
+"kernel_initializer", "activation_strategy" and "layer".
+if not given: the config file 'config.yaml' is used for these settings.
+at least "x" and "y" and optionally "postgres_estimate" as keys. The values have to be numpy.ndarray. For
+key "x" it should be the vectorized queries, for key "y" the true cardinalities in the same order and for
+optional key "postgres_estimate" the estimates of the postgres optimizer for the query.
+</code></pre>
+<ul>
+<li><code>config</code>: Only used if neither a model or a model_path is passed.</li>
+<li><code>config_file_path</code>: path for the config-file -&gt; only necessary if no config is given</li>
+<li><code>data</code>: Optional parameter for giving the data for training and testing. If given it has to be a Dict with</li>
+<li><code>model</code>: Option to pass a Model which can be used.</li>
+<li><code>model_path</code>: Option to pass a path to a saved model in an .h5 file.</li>
+<li><code>debug</code>: Boolean whether to print additional information while processing.</li>
+</ul>
+<p><a id="estimator.estimator.Estimator.get_model"></a></p>
+<h4 id="get_model">get_model</h4>
+<pre><code class="language-python">def get_model(len_input: int, override: bool = False) -&gt; Model
+</code></pre>
+<p>Function for creating the model of the neural network with the information from self.config</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>len_input</code>: The size of the input vector.</li>
+<li><code>override</code>: Whether an existing model should be overridden.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>The model for the neural network with the given properties.</p>
+<p><a id="estimator.estimator.Estimator.load_model"></a></p>
+<h4 id="load_model">load_model</h4>
+<pre><code class="language-python">def load_model(model_path: str)
+</code></pre>
+<p>Method for loading an already existing model wich was saved to file.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>model_path</code>: Path to the file containing the model to load</li>
+</ul>
+<p><a id="estimator.estimator.Estimator.denormalize"></a></p>
+<h4 id="denormalize">denormalize</h4>
+<pre><code class="language-python">@staticmethod
+def denormalize(y, y_min: float, y_max: float)
+</code></pre>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>y</code>: tensor filled with values to denormalize</li>
+<li><code>y_min</code>: minimum value for y</li>
+<li><code>y_max</code>: maximum value for y</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>tensor with denormalized values</p>
+<p><a id="estimator.estimator.Estimator.denormalize_np"></a></p>
+<h4 id="denormalize_np">denormalize_np</h4>
+<pre><code class="language-python">@staticmethod
+def denormalize_np(y: np.ndarray, y_min: float, y_max: float) -&gt; np.ndarray
+</code></pre>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>y</code>: numpy-array filled with values to denormalize</li>
+<li><code>y_min</code>: minimum value for y</li>
+<li><code>y_max</code>: maximum value for y</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>numpy-array with denormalized values</p>
+<p><a id="estimator.estimator.Estimator.load_data_file"></a></p>
+<h4 id="load_data_file">load_data_file</h4>
+<pre><code class="language-python">def load_data_file(file_path: str, override: bool = False) -&gt; Dict[str, np.ndarray]
+</code></pre>
+<p>Method for loading the data from file.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>file_path</code>: Path for the file where the data is stored. Has to be a .csv or .npy file.</li>
+<li><code>override</code>: Boolean whether to override already existing data.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>The data which is set for the Estimator.</p>
+<p><a id="estimator.estimator.Estimator.set_data"></a></p>
+<h4 id="set_data">set_data</h4>
+<pre><code class="language-python">def set_data(loaded_data: np.ndarray, override: bool = False)
+</code></pre>
+<p>Method for setting data and dependent values like max_card and input_length.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>loaded_data</code>: The data loaded from the file.</li>
+<li><code>override</code>: Boolean whether to override already existing data.</li>
+</ul>
+<p><a id="estimator.estimator.Estimator.split_data"></a></p>
+<h4 id="split_data">split_data</h4>
+<pre><code class="language-python">def split_data(split: float = 0.9)
+</code></pre>
+<p>Function to split the data into training- and test-set by a parameterized split value.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>split</code>: Percentage of the data going into training set. (split=0.9 means 90% of data is training set)</li>
+</ul>
+<p><a id="estimator.estimator.Estimator.train"></a></p>
+<h4 id="train">train</h4>
+<pre><code class="language-python">def train(epochs: int = 100, verbose: int = 1, shuffle: bool = True, batch_size: int = 32, validation_split: float = 0.1) -&gt; Union[History, History]
+</code></pre>
+<p>Method for training the before created Model.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>epoch.
+(possibly) but enlarge training time, while bigger batches may lead to a less well trained network while
+training faster.
+training data, not the test data, and are reselected for every epoch.
+</code></pre>
+<ul>
+<li><code>epochs</code>: Number of epochs for training.</li>
+<li><code>verbose</code>: How much information to print while training. 0 = silent, 1 = progress bar, 2 = one line per</li>
+<li><code>shuffle</code>: Whether to shuffle the training data -&gt; not necessary if split was done by numpy.random.choice()</li>
+<li><code>batch_size</code>: Size for the batches -&gt; Smaller batches may be able to train the neural network better</li>
+<li><code>validation_split</code>: How much of the data should be taken as validation set -&gt; these are taken from the</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>Training history as dict.</p>
+<p><a id="estimator.estimator.Estimator.test"></a></p>
+<h4 id="test">test</h4>
+<pre><code class="language-python">def test() -&gt; np.ndarray
+</code></pre>
+<p>Let the trained neural network predict the test data.</p>
+<p><strong>Returns</strong>:</p>
+<p>numpy-array containing the normalized predictions of the neural network for the test data</p>
+<p><a id="estimator.estimator.Estimator.predict"></a></p>
+<h4 id="predict">predict</h4>
+<pre><code class="language-python">def predict(data: np.ndarray) -&gt; np.ndarray
+</code></pre>
+<p>Let the trained neural network predict the given data.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>data</code>: numpy-array containing at least one vectorized query which should be predicted</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>numpy-array containing the normalized predictions of the neural network for the given data</p>
+<p><a id="estimator.estimator.Estimator.run"></a></p>
+<h4 id="run">run</h4>
+<pre><code class="language-python">def run(data_file_path: str = None, epochs: int = 100, verbose: int = 1, shuffle: bool = True, batch_size: int = 32, validation_split: float = 0.1, override_model: bool = False, save_model: bool = True, save_model_file_path: str = &quot;model&quot;) -&gt; np.ndarray
+</code></pre>
+<p>Method for a full run of the Estimator, with training and testing.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>epoch.
+(possibly) but enlarge training time, while bigger batches may lead to a less well trained network while
+training faster.
+training data, not the test data, and are reselected for every epoch.
+should be saved.
+</code></pre>
+<ul>
+<li><code>data_file_path</code>: Optional path to saved data file. Only necessary if no data has been set before.</li>
+<li><code>epochs</code>: Number of epochs for training.</li>
+<li><code>verbose</code>: How much information to print while training. 0 = silent, 1 = progress bar, 2 = one line per</li>
+<li><code>shuffle</code>: Whether to shuffle the training data -&gt; not necessary if split was done by numpy.random.choice()</li>
+<li><code>batch_size</code>: Size for the batches -&gt; Smaller batches may be able to train the neural network better</li>
+<li><code>validation_split</code>: How much of the data should be taken as validation set -&gt; these are taken from the</li>
+<li><code>override_model</code>: Whether to override a probably already existing model.</li>
+<li><code>save_model</code>: Whether to save the trained model to file.</li>
+<li><code>save_model_file_path</code>: When save_model==True this parameter is required to give the path where the model</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>A numpy.ndarray containing the calculated q-error.</p>
+<p><a id="estimator.estimator.Estimator.save_model"></a></p>
+<h4 id="save_model">save_model</h4>
+<pre><code class="language-python">def save_model(filename: str = &quot;model&quot;)
+</code></pre>
+<p>Method for saving the Model to file.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>filename)
+</code></pre>
+<ul>
+<li><code>filename</code>: Name of the file where the model should be stored. (Without file ending. ".h5" is added to the</li>
+</ul>
+
+
+</section>
+</div> <!-- end of search-noresults -->
+<div class="search-results">
+<div class="has-results">
+
+<h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+<ul class="search-results-list"></ul>
+
+</div> <!-- end of has-results -->
+<div class="no-results">
+
+<h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+
+</div> <!-- end of no-results -->
+</div> <!-- end of search-results -->
+</div> <!-- end of book-search-results -->
+
+</div> <!-- end of page-inner -->
+</div> <!-- end of page-wrapper -->
+
+</div> <!-- end of body-inner -->
+
+</div> <!-- end of book-body -->
+<script src="../../js/main.js"></script>
+<script src="../../search/main.js"></script>
+<script src="../../js/gitbook.min.js"></script>
+<script src="../../js/theme.min.js"></script>
+</body>
+</html>

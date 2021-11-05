@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<title>QueryParser Class - Local Cardinality Estimation</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="generator" content="mkdocs-1.2.3, mkdocs-gitbook-1.0.7">
+
+<link rel="shortcut icon" href="../../images/favicon.ico" type="image/x-icon">
+<meta name="HandheldFriendly" content="true"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta rel="next" href="" />
+<link href="../../css/style.min.css" rel="stylesheet"> 
+</head>
+
+<body>
+<div class="book">
+<div class="book-summary">
+<div id="book-search-input" role="search">
+<input type="text" placeholder="Type to search" />
+</div> <!-- end of book-search-input -->
+
+<nav role="navigation">
+<ul class="summary">
+<li>
+<a href="../.." target="_blank" class="custom-link">Local Cardinality Estimation</a>
+</li>
+<li class="divider"></li>
+<li class="chapter" data-path="">
+<a href="../..">Home</a>
+<li class="header">DatabaseConnector</li>
+
+<li>
+<a href="../../databaseconnector/databaseconnector-class/" class="">DatabaseConnector Class</a>
+</li>
+
+<li>
+<a href="../../databaseconnector/databaseconnector-readme/" class="">DatabaseConnector Readme</a>
+</li>
+
+<li class="header">QueryParser</li>
+
+<li>
+<a href="./" class="active">QueryParser Class</a>
+</li>
+
+<li>
+<a href="../queryparser-readme/" class="">QueryParser Readme</a>
+</li>
+
+<li class="header">QueryCommunicator</li>
+
+<li>
+<a href="#">QueryCommunicator Class</a>
+<ul>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-class/" class="">DatabaseEvaluator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/databaseevaluator-readme/" class="">DatabaseEvaluator Readme</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-class/" class="">SQLGenerator Class</a>
+</li>
+
+<li>
+<a href="../../querycommunicator/querycommunicator-class/sqlgenerator-readme/" class="">SQLGenerator Readme</a>
+</li>
+</ul>
+</li>
+
+<li class="header">Meta-Collector</li>
+
+<li>
+<a href="../../meta-collector/meta-collector-class/" class="">Meta-Collector Class</a>
+</li>
+
+<li>
+<a href="../../meta-collector/meta-collector-readme/" class="">Meta-Collector Readme</a>
+</li>
+
+<li class="header">Vectorizer</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-class/" class="">Vectorizer Class</a>
+</li>
+
+<li>
+<a href="../../vectorizer/vectorizer-readme/" class="">Vectorizer Readme</a>
+</li>
+
+<li class="header">Estimator</li>
+
+<li>
+<a href="../../estimator/estimator-class/" class="">Estimator Class</a>
+</li>
+
+<li>
+<a href="../../estimator/estimator-readme/" class="">Estimator Readme</a>
+</li>
+
+<li class="divider"></li>
+
+
+
+<li><a href="http://www.mkdocs.org">
+Published with MkDocs
+</a></li>
+
+<li><a href="https://github.com/GitbookIO/theme-default">
+Theme by GitBook
+</a></li>
+</ul>
+
+</nav>
+
+</div> <!-- end of book-summary -->
+
+<div class="book-body">
+<div class="body-inner">
+<div class="book-header" role="navigation">
+
+<!-- Title -->
+<h1>
+<i class="fa fa-circle-o-notch fa-spin"></i>
+<a href="." ></a>
+</h1>
+
+</div> <!-- end of book-header -->
+
+<div class="page-wrapper" tabindex="-1" role="main">
+<div class="page-inner">
+<div id="book-search-results">
+<div class="search-noresults">
+
+<section class="normal markdown-section">
+
+
+
+<p><a id="query_parser.query_parser"></a></p>
+<h1 id="query_parserquery_parser">query_parser.query_parser</h1>
+<p><a id="query_parser.query_parser.QueryFormat"></a></p>
+<h2 id="queryformat-objects">QueryFormat Objects</h2>
+<pre><code class="language-python">class QueryFormat(Enum)
+</code></pre>
+<p>Enum for the different supported query-formats.</p>
+<p>CROSS_PRODUCT: SELECT COUNT(*) FROM movie_companies mc,title t,movie_info_idx mi_idx WHERE t.id=mc.movie_id AND
+    t.id=mi_idx.movie_id AND mi_idx.info_type_id=112 AND mc.company_type_id=2;</p>
+<p>JOIN_ON: SELECT COUNT(*) FROM movie_companies mc INNER JOIN title t ON (t.id=mc.movie_id) INNER JOIN movie_info_idx
+    mi_idx ON (t.id=mi_idx.movie_id) WHERE mi_idx.info_type_id=112 AND mc.company_type_id=2;</p>
+<p><a id="query_parser.query_parser.QueryParser"></a></p>
+<h2 id="queryparser-objects">QueryParser Objects</h2>
+<pre><code class="language-python">class QueryParser()
+</code></pre>
+<p>Class for the query_parser. This is responsible of reading a given file (.csv/.tsv or .sql) which contains sql
+queries (for more details see Readme) parse them and return a file (.yaml) containing the aggregated information of
+the input file. This aggregated .yaml file is the requirement for the MetaCollector.</p>
+<p><a id="query_parser.query_parser.QueryParser.operators"></a></p>
+<h4 id="operators">operators</h4>
+<p>The possible operators which can occur in the queries. ["&lt;=", "!=", "&gt;=", "=", "&lt;", "&gt;", "IS"]</p>
+<p><a id="query_parser.query_parser.QueryParser.read_file"></a></p>
+<h4 id="read_file">read_file</h4>
+<pre><code class="language-python">def read_file(file_path: str, inner_separator: str = None, outer_separator: str = None, query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) -&gt; Tuple[Dict, str, str, str]
+</code></pre>
+<p>Generic method for rooting the processing of the input file which contains the queries according to the given
+file type. Because .sql/.tsv files need to be processed another way than .sql files. The parameters
+inner_separator and outer_separator allow the user to use customized .csv/.tsv files. The parameter
+query_format allows the user to choose between the two most common join formats.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>.sql. No other file types are supported at the moment. This path could be absolute as well as relative.
+documentation for details.
+</code></pre>
+<p>:return A tuple containing a dictionary with the table-string as key and a list of selection attributes as
+    value, the file-type, the inner_separator and the outer_separator.
+- <code>file_path</code>: Path to the file containing the sql statements. This path has to end with .csv/.tsv or
+- <code>inner_separator</code>: The column separator used in the file. You can use '\t' for .tsv files. -&gt; See
+- <code>outer_separator</code>: The block separator used in the file. -&gt; See documentation for details.
+- <code>query_format</code>: The format of the sql query. Look at documentation of QueryFormat for details.</p>
+<p><a id="query_parser.query_parser.QueryParser.read_sql_file"></a></p>
+<h4 id="read_sql_file">read_sql_file</h4>
+<pre><code class="language-python">@staticmethod
+def read_sql_file(file_path: str, query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) -&gt; Tuple[Dict, str, str, str]
+</code></pre>
+<p>Read and parse the sql statements from given sql file. The most parts of the sql syntax are processed and
+removed. Parts like 'SELECT COUNT(*)' and 'INNER JOIN' are removed from the query.</p>
+<p><strong>Arguments</strong>:</p>
+<p>types are supported at the moment. This path could be absolute as well as relative.
+:return A tuple containing a dictionary with the table-string as key and a list of selection attributes as
+    value, the file-type, the inner_separator and the outer_separator.
+- <code>file_path</code>: Path to the file containing the sql statements. This path has to end with .sql. No other file
+- <code>query_format</code>: The format of the sql query. Look at documentation of QueryFormat for details.</p>
+<p><a id="query_parser.query_parser.QueryParser.read_csv_file"></a></p>
+<h4 id="read_csv_file">read_csv_file</h4>
+<pre><code class="language-python">@staticmethod
+def read_csv_file(file_path: str, inner_separator: str = &quot;,&quot;, outer_separator: str = &quot;#&quot;) -&gt; Tuple[Dict, str, str, str]
+</code></pre>
+<p>Read the csv formatted sql statements from given file. For more details on the format, look at the readme.</p>
+<p><strong>Arguments</strong>:</p>
+<p>with .csv or .tsv. No other file types are supported at the moment. This path could be absolute as well as
+relative.
+    documentation for details.
+:return A tuple containing a dictionary with the table-string as key and a list of selection attributes as
+    value, the file-type, the inner_separator and the outer_separator.
+- <code>file_path</code>: Path to the file containing the sql statements formatted as csv or .tsv. This path has to end
+- <code>inner_separator</code>: The column separator used in the file. You can use '\t' for .tsv files. -&gt; See
+- <code>outer_separator</code>: The block separator used in the file. -&gt; See documentation for details.</p>
+<p><a id="query_parser.query_parser.QueryParser.create_solution_dict"></a></p>
+<h4 id="create_solution_dict">create_solution_dict</h4>
+<pre><code class="language-python">def create_solution_dict(command_dict: Dict[str, List[str] or List[Tuple[str, str]]], file_type: str, inner_separator: str) -&gt; Dict[int, Dict[str, List[str or Tuple[str, str]]]]
+</code></pre>
+<p>Method for building the solution dict. Therefore the given file with the queries must be parsed at first and
+the command_dict must be created.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>clauses as string if the file type is sql or a list of tuples containing the join-attribute-string in first
+and the selection-attribute-string in second place.
+documentation for details.
+</code></pre>
+<p>:return The solution dict containing 'table_names', 'join_attributes' and 'selection_attributes'.
+- <code>command_dict</code>: Dict with a alphabetical sorted string of the joining tables as key and a list of where
+- <code>file_type</code>: String with 'csv'/'tsv' or 'sql' which tells the file type of the read file.
+- <code>inner_separator</code>: The column separator used in the file. You can use '\t' for .tsv files. -&gt; See</p>
+<p><a id="query_parser.query_parser.QueryParser.table_name_unpacker"></a></p>
+<h4 id="table_name_unpacker">table_name_unpacker</h4>
+<pre><code class="language-python">@staticmethod
+def table_name_unpacker(from_string: str, separator: str = &quot;,&quot;) -&gt; List[Tuple[str, str]]
+</code></pre>
+<p>Takes the sorted string of the from clause and extracts the tables with their aliases.</p>
+<p><strong>Arguments</strong>:</p>
+<ul>
+<li><code>from_string</code>: Alphabetical ordered string containing all tables to join, separated by the separator.</li>
+<li><code>separator</code>: The column separator used in the file. You can use '\t' for .tsv files.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>List of tuples where the first element of the tuple is the table name and the second one is the alias.</p>
+<p><a id="query_parser.query_parser.QueryParser.sql_attribute_unpacker"></a></p>
+<h4 id="sql_attribute_unpacker">sql_attribute_unpacker</h4>
+<pre><code class="language-python">def sql_attribute_unpacker(where_string_list: List[str]) -&gt; Tuple[List[str], List[str]]
+</code></pre>
+<p>Unpack the attribute strings from sql-file into sets containing the attributes.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>selection-attributes.
+</code></pre>
+<ul>
+<li><code>where_string_list</code>: A list of strings from the where clauses. These have to be separated into join- and</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>A tuple containing the list of join-attributes in first and the list of selection-attributes in second</p>
+<p><a id="query_parser.query_parser.QueryParser.csv_attribute_unpacker"></a></p>
+<h4 id="csv_attribute_unpacker">csv_attribute_unpacker</h4>
+<pre><code class="language-python">def csv_attribute_unpacker(attribute_tuples: List[Tuple[str, str]], separator: str = &quot;,&quot;) -&gt; Tuple[List[str], List[str]]
+</code></pre>
+<p>Unpack the attribute strings from csv-file into sets containing the attributes.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>join-attributes, while the second string contains all selection-attributes.
+</code></pre>
+<ul>
+<li><code>attribute_tuples</code>: A list of tuples of strings where the first string is the string for all</li>
+<li><code>separator</code>: The column separator used in the file. You can use '\t' for .tsv files.</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+<p>A tuple containing the list of join-attributes in first and the list of selection-attributes in second</p>
+<p><a id="query_parser.query_parser.QueryParser.save_solution_dict"></a></p>
+<h4 id="save_solution_dict">save_solution_dict</h4>
+<pre><code class="language-python">@staticmethod
+def save_solution_dict(solution_dict: Dict[int, Dict[str, List[str or Tuple[str, str]]]], save_file_path: str = &quot;solution_dict&quot;)
+</code></pre>
+<p>Save the solution to file with specified filename.</p>
+<p><strong>Arguments</strong>:</p>
+<p>automatically.
+- <code>solution_dict</code>: The dict containing the data to save.
+- <code>save_file_path</code>: The path for the file in which the data should be saved. The .yaml ending is added</p>
+<p><a id="query_parser.query_parser.QueryParser.run"></a></p>
+<h4 id="run">run</h4>
+<pre><code class="language-python">def run(file_path: str, save_file_path: str, inner_separator: str = None, outer_separator: str = None, query_format: QueryFormat = QueryFormat.CROSS_PRODUCT) -&gt; Dict[int, Dict[str, List[str or Tuple[str, str]]]]
+</code></pre>
+<p>Method for the whole parsing process.</p>
+<p><strong>Arguments</strong>:</p>
+<pre><code>documentation for details.
+this is not used.
+</code></pre>
+<ul>
+<li><code>file_path</code>: The file to read in which the sql-statements are saved.</li>
+<li><code>save_file_path</code>: The path where to save the results.</li>
+<li><code>inner_separator</code>: The column separator used in the file. You can use '\t' for .tsv files. -&gt; See</li>
+<li><code>outer_separator</code>: The block separator used in the file. -&gt; See documentation for details.</li>
+<li><code>query_format</code>: The indicator for the format of the .sql query-file. If the given file is not .sql than</li>
+</ul>
+<p><strong>Returns</strong>:</p>
+
+
+</section>
+</div> <!-- end of search-noresults -->
+<div class="search-results">
+<div class="has-results">
+
+<h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+<ul class="search-results-list"></ul>
+
+</div> <!-- end of has-results -->
+<div class="no-results">
+
+<h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+
+</div> <!-- end of no-results -->
+</div> <!-- end of search-results -->
+</div> <!-- end of book-search-results -->
+
+</div> <!-- end of page-inner -->
+</div> <!-- end of page-wrapper -->
+
+</div> <!-- end of body-inner -->
+
+</div> <!-- end of book-body -->
+<script src="../../js/main.js"></script>
+<script src="../../search/main.js"></script>
+<script src="../../js/gitbook.min.js"></script>
+<script src="../../js/theme.min.js"></script>
+</body>
+</html>

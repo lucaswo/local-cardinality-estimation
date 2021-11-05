@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+<title>Home - Local Cardinality Estimation</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<meta name="generator" content="mkdocs-1.2.3, mkdocs-gitbook-1.0.7">
+
+<link rel="shortcut icon" href="./images/favicon.ico" type="image/x-icon">
+<meta name="HandheldFriendly" content="true"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta rel="next" href="" />
+<link href="./css/style.min.css" rel="stylesheet"> 
+</head>
+
+<body>
+<div class="book">
+<div class="book-summary">
+<div id="book-search-input" role="search">
+<input type="text" placeholder="Type to search" />
+</div> <!-- end of book-search-input -->
+
+<nav role="navigation">
+<ul class="summary">
+<li>
+<a href="." target="_blank" class="custom-link">Local Cardinality Estimation</a>
+</li>
+<li class="divider"></li>
+<li class="chapter active" data-path="">
+<a href=".">Home</a>
+<li class="header">DatabaseConnector</li>
+
+<li>
+<a href="databaseconnector/databaseconnector-class/" class="">DatabaseConnector Class</a>
+</li>
+
+<li>
+<a href="databaseconnector/databaseconnector-readme/" class="">DatabaseConnector Readme</a>
+</li>
+
+<li class="header">QueryParser</li>
+
+<li>
+<a href="queryparser/queryparser-class/" class="">QueryParser Class</a>
+</li>
+
+<li>
+<a href="queryparser/queryparser-readme/" class="">QueryParser Readme</a>
+</li>
+
+<li class="header">QueryCommunicator</li>
+
+<li>
+<a href="#">QueryCommunicator Class</a>
+<ul>
+
+<li>
+<a href="querycommunicator/querycommunicator-class/databaseevaluator-class/" class="">DatabaseEvaluator Class</a>
+</li>
+
+<li>
+<a href="querycommunicator/querycommunicator-class/databaseevaluator-readme/" class="">DatabaseEvaluator Readme</a>
+</li>
+
+<li>
+<a href="querycommunicator/querycommunicator-class/sqlgenerator-class/" class="">SQLGenerator Class</a>
+</li>
+
+<li>
+<a href="querycommunicator/querycommunicator-class/sqlgenerator-readme/" class="">SQLGenerator Readme</a>
+</li>
+</ul>
+</li>
+
+<li class="header">Meta-Collector</li>
+
+<li>
+<a href="meta-collector/meta-collector-class/" class="">Meta-Collector Class</a>
+</li>
+
+<li>
+<a href="meta-collector/meta-collector-readme/" class="">Meta-Collector Readme</a>
+</li>
+
+<li class="header">Vectorizer</li>
+
+<li>
+<a href="vectorizer/vectorizer-class/" class="">Vectorizer Class</a>
+</li>
+
+<li>
+<a href="vectorizer/vectorizer-readme/" class="">Vectorizer Readme</a>
+</li>
+
+<li class="header">Estimator</li>
+
+<li>
+<a href="estimator/estimator-class/" class="">Estimator Class</a>
+</li>
+
+<li>
+<a href="estimator/estimator-readme/" class="">Estimator Readme</a>
+</li>
+
+<li class="divider"></li>
+
+
+
+<li><a href="http://www.mkdocs.org">
+Published with MkDocs
+</a></li>
+
+<li><a href="https://github.com/GitbookIO/theme-default">
+Theme by GitBook
+</a></li>
+</ul>
+
+</nav>
+
+</div> <!-- end of book-summary -->
+
+<div class="book-body">
+<div class="body-inner">
+<div class="book-header" role="navigation">
+
+<!-- Title -->
+<h1>
+<i class="fa fa-circle-o-notch fa-spin"></i>
+<a href="." ></a>
+</h1>
+
+</div> <!-- end of book-header -->
+
+<div class="page-wrapper" tabindex="-1" role="main">
+<div class="page-inner">
+<div id="book-search-results">
+<div class="search-noresults">
+
+<section class="normal markdown-section">
+
+
+
+<h1 id="local-cardinality-estimation-see-1">Local Cardinality Estimation (See [1])</h1>
+<h2 id="the-complete-documentation-can-be-found-here">The complete documentation can be found <a href="https://lucaswo.github.io/local-cardinality-estimation/">here</a>.</h2>
+<ul>
+<li>
+<p>The submodule 'meta-collector' collects the several informations from the requested table and saves the information into a .json file</p>
+</li>
+<li>
+<p>The submodule 'sql-generator' uses the output of the meta-collector to create random SQL-Queries with the corresponding schema</p>
+</li>
+<li>
+<p>The submodule 'vectorizer' uses the output of the sql-generator to encode it into a vectors </p>
+</li>
+<li>
+<p>The submodule 'estimator' takes the encoded vectors and uses them on a neural network</p>
+</li>
+<li>
+<p>The submodule 'postrgres-evaluator' takes the sql-queries and executes them on the postgres-database to get the true cardinality</p>
+</li>
+</ul>
+<p><img alt="Module overview" src="diagrams/module_overview.png" /></p>
+<p>For building the Documentation you need to execute the <code>setup_doc.sh</code>. This script installs the prerequisites if not already installed, builds the documentation and starts the documentation-server.</p>
+<h2 id="references">References</h2>
+<p>[1] <a href="https://dl.acm.org/citation.cfm?id=3329875">Woltmann et al., Cardinality estimation with local deep learning models, aiDM@SIGMOD 2019</a><br />
+[2] <a href="https://dl.gi.de/handle/20.500.12116/35812">Woltmann et al., Aggregate-based Training Phase for ML-based Cardinality Estimation, BTW 2021</a><br />
+[3] <a href="https://arxiv.org/abs/2005.09367">Woltmann et al., Machine Learning-based Cardinality Estimation in DBMS on Pre-Aggregated Data, arXiv 2020</a></p>
+<h2 id="cite">Cite</h2>
+<p>Please cite our papers if you use this code in your own work:</p>
+<pre><code>@article{woltmann2019localdeep,
+  title = {Cardinality estimation with local deep learning models},
+  author = {Woltmann, Lucas and Hartmann, Claudio and Thiele, Maik and Habich, Dirk and Lehner, Wolfgang},
+  booktitle = {Proceedings of the Second International Workshop on Exploiting Artificial Intelligence Techniques for Data Management},
+  series = {aiDM@SIGMOD '19},
+  year = {2019}
+}
+
+@article{woltmann2021aggregate,
+  title={Aggregate-based Training Phase for ML-based Cardinality Estimation},
+  author={Woltmann, Lucas and Hartmann, Claudio and Habich, Dirk and Lehner, Wolfgang},
+  journal={BTW 2021},
+  year={2021},
+  publisher={Gesellschaft f{\&quot;u}r Informatik, Bonn},
+  pages = {135-154},
+  doi = {10.18420/btw2021-07}
+}
+
+@article{woltmann2020cube,
+  title={Machine Learning-based Cardinality Estimation in DBMS on Pre-Aggregated Data},
+  author={Woltmann, Lucas and Hartmann, Claudio and Habich, Dirk and Lehner, Wolfgang},
+  journal={arXiv preprint arXiv:2005.09367},
+  year={2020}
+}
+</code></pre>
+
+
+</section>
+</div> <!-- end of search-noresults -->
+<div class="search-results">
+<div class="has-results">
+
+<h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+<ul class="search-results-list"></ul>
+
+</div> <!-- end of has-results -->
+<div class="no-results">
+
+<h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+
+</div> <!-- end of no-results -->
+</div> <!-- end of search-results -->
+</div> <!-- end of book-search-results -->
+
+</div> <!-- end of page-inner -->
+</div> <!-- end of page-wrapper -->
+
+</div> <!-- end of body-inner -->
+
+</div> <!-- end of book-body -->
+<script src="./js/main.js"></script>
+<script src="search/main.js"></script>
+<script src="./js/gitbook.min.js"></script>
+<script src="./js/theme.min.js"></script>
+</body>
+</html>
